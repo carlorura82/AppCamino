@@ -391,7 +391,13 @@
             return;
         }
     }
-
+if (ordini.length > 1) {
+            const btnU = document.createElement('button');
+            btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
+            btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer; font-weight:bold;";
+            btnU.onclick = () => emettiProformaUnificato(nome);
+            corpo.appendChild(btnU);
+        }
     window.onload = () => {
         const datiSalvati = localStorage.getItem('prodotti_extra');
         if (datiSalvati) prodottiExtra = JSON.parse(datiSalvati);
