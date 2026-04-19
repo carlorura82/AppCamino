@@ -1,6 +1,6 @@
 {
-  "name": "POS Ristorante",
-  "short_name": "POS",
+  "name": "POS2",
+  "short_name": "POS2",
   "start_url": "./index.html",
   "display": "standalone"
   "background_color": "#2c3e50",
