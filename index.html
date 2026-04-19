@@ -469,11 +469,11 @@ function mostraDettaglio(nome) {
         mostraCategoria('bevande'); 
     };
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('./sw.js').then(function(registration) {
-        console.log('ServiceWorker registrato con successo: ', registration.scope);
-      }, function(err) {
+ if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log("Service Worker OK"));
+}
+    function(err) {
         console.log('ServiceWorker registrazione fallita: ', err);
       });
     });
