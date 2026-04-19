@@ -137,9 +137,19 @@ function salvaSuDisco() {
     localStorage.setItem('contatoreProforma', contatoreProforma);
 }
 
+// --- TASTIERINO E ORDINE ---
 function digita(v) { buffer += v; aggiornaDisplay(); }
 function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
 function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
+function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
+
+function modificaQuantita(n) { 
+    if (!idRigaSelezionata) return; 
+    const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata); 
+    articoliInCorso[idx].qta += n; 
+    if (articoliInCorso[idx].qta <= 0) articoliInCorso.splice(idx, 1); 
+    renderingOrdine(); 
+}
 
 function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
     let qta = 1, prezzoFinale = prezzoBase;
@@ -176,6 +186,7 @@ function renderingOrdine() {
     document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
 }
 
+// --- TAVOLI ---
 function apriTavoli(modo) {
     modalitaTavoli = modo;
     chiudiDettaglioTavolo();
@@ -239,46 +250,16 @@ function mostraDettaglio(nome) {
 
 function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
 
-function inviaARawBT(testo) {
-    const base64testo = btoa(unescape(encodeURIComponent(testo)));
-    window.location.href = "rawbt:base64," + base64testo;
+function richiama(id) {
+    const idx = ordiniArchiviati.findIndex(o => o.id === id);
+    if(idx === -1) return;
+    articoliInCorso = [...ordiniArchiviati[idx].articoli];
+    document.getElementById('tavolo-attuale').innerText = ordiniArchiviati[idx].tavolo;
+    ordiniArchiviati.splice(idx, 1);
+    salvaSuDisco(); renderingOrdine(); chiudiTavoli();
 }
 
-function stampaFinestra(proforma) {
-    let testo = "";
-    testo += centraTesto("PIZZERIA DA CARLO", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    proforma.articoli.forEach(item => {
-        const q = `${item.qta}x `; 
-        const p = `${(item.qta * item.prezzo).toFixed(2)}`;
-        const spazioDisponibile = LARGHEZZA_RIGA_STAMPA - q.length - p.length - 1;
-        const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
-        const sp = Math.max(1, LARGHEZZA_RIGA_STAMPA - (q.length + n.length + p.length));
-        testo += q + n + " ".repeat(sp) + p + "\n";
-    });
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    const rigaTot = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
-    testo += " ".repeat(LARGHEZZA_RIGA_STAMPA - rigaTot.length) + rigaTot + "\n\n";
-    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
-    inviaARawBT(testo);
-}
-
-function stampaCucina(nomeTavolo, articoli) {
-    let testo = "";
-    testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    articoli.forEach(item => { testo += `${item.qta} x ${item.nome.toUpperCase()}\n`; });
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
-    inviaARawBT(testo);
-}
-// --- FUNZIONI DI INVIO ALLA STAMPANTE ---
-
+// --- FUNZIONI DI STAMPA RAWBT ---
 function inviaARawBT(testo) {
     try {
         const base64testo = btoa(unescape(encodeURIComponent(testo)));
@@ -291,7 +272,6 @@ function inviaARawBT(testo) {
 
 function stampaFinestra(proforma) {
     if (!proforma) return;
-    
     let testo = "";
     testo += centraTesto("PIZZERIA DA CARLO", LARGHEZZA_RIGA_STAMPA) + "\n";
     testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
@@ -312,11 +292,20 @@ function stampaFinestra(proforma) {
     testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
     const rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
     testo += " ".repeat(LARGHEZZA_RIGA_STAMPA - rigaTotale.length) + rigaTotale + "\n\n";
-    
     testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA_STAMPA) + "\n";
     testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA_STAMPA) + "\n";
     testo += "\n\n\n\n\n"; 
 
+    inviaARawBT(testo);
+}
+
+function stampaCucina(nomeTavolo, articoli) {
+    let testo = "";
+    testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    articoli.forEach(item => { testo += `${item.qta} x ${item.nome.toUpperCase()}\n`; });
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
     inviaARawBT(testo);
 }
 
@@ -332,27 +321,37 @@ function emettiProforma() {
         ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
     };
 
-    stampaFinestra(dp); // Questa è la chiamata che prima falliva
-    
-    archivioProforma.push(dp);
-    contatoreProforma++;
-    
-    svuotaOrdine(); 
-    salvaSuDisco(); 
-    aggiornaMappa();
-}
-
-// Assicurati che queste chiusure siano presenti alla fine del file
-</script>
-</body>
-</html>
-function emettiProforma() {
-    if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
-    const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
     stampaFinestra(dp);
     archivioProforma.push(dp);
     contatoreProforma++;
+    
     svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
+}
+
+// Funzione Ripristinata (Stampa Scontrino Singolo)
+function stampaSingoloDaTavolo(id) {
+    const idx = ordiniArchiviati.findIndex(o => o.id === id);
+    if (idx === -1) return;
+    const o = ordiniArchiviati[idx];
+    const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
+    stampaFinestra(dp);
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    ordiniArchiviati.splice(idx, 1);
+    salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
+}
+
+// Funzione Ripristinata (Stampa Proforma Totale Unificato)
+function emettiProformaUnificato(nomeTavolo) {
+    const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
+    let tuttiArt = []; let tot = 0;
+    ordini.forEach(o => { tuttiArt = tuttiArt.concat(o.articoli); tot += o.totale; });
+    const dp = { numero: contatoreProforma, tavolo: nomeTavolo, articoli: tuttiArt, totale: tot, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+    stampaFinestra(dp);
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
+    salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
 }
 
 function chiusura() {
@@ -375,6 +374,7 @@ function chiusura() {
     setTimeout(() => location.reload(), 1000);
 }
 
+// --- GESTIONE INTERFACCIA E PRODOTTI ---
 function mostraCategoria(cat) {
     catAttuale = cat.toLowerCase().trim();
     const griglia = document.getElementById('griglia-prodotti'); 
@@ -396,8 +396,9 @@ function getColoreCSS(c) {
     return colori[c] || '#3498db';
 }
 
-function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
-function modificaQuantita(n) { if (!idRigaSelezionata) return; const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata); articoliInCorso[idx].qta += n; if (articoliInCorso[idx].qta <= 0) articoliInCorso.splice(idx, 1); renderingOrdine(); }
+// Funzioni segnaposto per tasti presenti ma non implementati
+function aggiungiNuovoArticoloListino() { alert("Questa funzione non è ancora stata completata o è collegata esternamente."); }
+function strumentiRecupero() { alert("Questa funzione non è ancora stata completata o è collegata esternamente."); }
 
 window.onload = () => { mostraCategoria('bevande'); aggiornaMappa(); };
 </script>
