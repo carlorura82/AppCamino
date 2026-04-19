@@ -1,0 +1,15 @@
+{
+  "name": "POS Ristorante",
+  "short_name": "POS",
+  "start_url": "/NOME-DEL-TUO-REPOSITORY/",
+  "display": "standalone",
+  "background_color": "#2c3e50",
+  "theme_color": "#2c3e50",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5164/5164024.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
