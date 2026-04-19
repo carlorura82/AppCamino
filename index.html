@@ -465,24 +465,16 @@ function mostraCategoria(cat) {
         svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
     }
 
-  function stampaSingoloDaTavolo(id) {
+    function stampaSingoloDaTavolo(id) {
         const idx = ordiniArchiviati.findIndex(o => o.id === id);
         if (idx === -1) return;
-        
         const o = ordiniArchiviati[idx];
         const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
-
-        // --- MODIFICA QUI: Sostituiamo stampaFinestra con la nuova funzione RawBT ---
-        stampaProforma(dp.tavolo, dp.articoli, dp.totale);
-        // --------------------------------------------------------------------------
-
+        stampaFinestra(dp);
         archivioProforma.push(dp);
         contatoreProforma++;
         ordiniArchiviati.splice(idx, 1);
-        
-        salvaSuDisco(); 
-        chiudiTavoli(); 
-        aggiornaMappa();
+        salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
 
     function emettiProformaUnificato(nomeTavolo) {
@@ -497,43 +489,49 @@ function mostraCategoria(cat) {
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
 
- function stampaProforma(proforma) {
-    const LARGHEZZA = 42; 
-    let testo = "";
+    function stampaFinestra(proforma) {
+    const LARGHEZZA_RIGA = 42; // Ottimale per KUBE II
+    let corpoS = "";
 
-    // --- INTESTAZIONE ---
-    testo += centraTesto("il Camino", LARGHEZZA) + "\n";
-    testo += centraTesto("--------------------------------", LARGHEZZA) + "\n";
-    testo += centraTesto("*** PROFORMA ***", LARGHEZZA) + "\n";
-    testo += centraTesto(`N. ${proforma.numero} - TAVOLO: ${proforma.tavolo}`, LARGHEZZA) + "\n";
-    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA) + "\n";
-    testo += "--------------------------------\n\n";
-
-    // --- CORPO ---
     proforma.articoli.forEach(item => {
-        let qtaNome = `${item.qta}x ${item.nome.toUpperCase()}`;
-        let prezzo = (item.qta * item.prezzo).toFixed(2);
+        const q = `${item.qta}x `; 
+        const p = `${(item.qta * item.prezzo).toFixed(2)}`;
+        // Calcoliamo quanto spazio resta per il nome
+        const spazioDisponibile = LARGHEZZA_RIGA - q.length - p.length - 1;
+        const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
         
-        let spaziSostitutivi = LARGHEZZA - qtaNome.length - prezzo.length;
-        if (spaziSostitutivi < 1) spaziSostitutivi = 1;
-
-        testo += qtaNome + " ".repeat(spaziSostitutivi) + prezzo + "\n";
+        // Calcolo spazi per allineare il prezzo a destra
+        const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
+        corpoS += q + n + " ".repeat(sp) + p + "\n";
     });
 
-    // --- TOTALE ---
-    testo += "--------------------------------\n";
-    let rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
-    testo += " ".repeat(LARGHEZZA - rigaTotale.length) + rigaTotale + "\n";
-    testo += "--------------------------------\n\n";
+    // Costruzione stringa finale
+    let testo = "";
+    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
+    testo += corpoS;
+    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
+    
+    const rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
+    testo += " ".repeat(LARGHEZZA_RIGA - rigaTotale.length) + rigaTotale + "\n\n";
+    
+    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA) + "\n";
+    testo += "\n\n\n\n\n"; // Spazio per il taglio carta
 
-    testo += centraTesto("DOCUMENTO NON FISCALE", LARGHEZZA) + "\n";
-    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA) + "\n";
-    testo += "\n\n\n\n\n"; 
-
-    // --- INVIO A RAWBT ---
+    // --- INVIO A RAWBT (Sostituisce window.print) ---
     const base64testo = btoa(unescape(encodeURIComponent(testo)));
     window.location.href = "rawbt:base64," + base64testo;
-}   
+}
+
+// Funzione di supporto necessaria (se non l'hai già inserita)
+function centraTesto(testo, larghezza) {
+    if (testo.length >= larghezza) return testo;
+    let spazi = Math.floor((larghezza - testo.length) / 2);
+    return " ".repeat(spazi) + testo;
+}
 
     // --- ALTRE FUNZIONI ---
 function aggiungiNuovoArticoloListino() {
@@ -629,48 +627,27 @@ ${MARGINE_STAMPA}TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2)}
     salvaSuDisco(); 
     location.reload();
 }
-function centraTesto(testo, larghezza = 42) {
-    if (testo.length >= larghezza) return testo;
-    let spazi = Math.floor((larghezza - testo.length) / 2);
-    return " ".repeat(spazi) + testo;
-}
-
 function stampaCucina(nomeTavolo, articoli) {
-    const LARGHEZZA = 42; // Standard per KUBE II
-    let testo = "";
-
-    // Intestazione centrata
-    testo += centraTesto("--------------------------------", LARGHEZZA) + "\n";
-    testo += centraTesto("*** ORDINE CUCINA ***", LARGHEZZA) + "\n";
-    testo += centraTesto("--------------------------------", LARGHEZZA) + "\n";
-    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA) + "\n";
-    testo += centraTesto(`ORA: ${new Date().toLocaleTimeString()}`, LARGHEZZA) + "\n";
-    testo += "--------------------------------\n\n";
-
-    // Articoli (allineati a sinistra ma con un piccolo margine se vuoi)
+    const LARGHEZZA_RIGA = 42;
+    let corpoCucina = "";
+    
     articoli.forEach(item => {
-        // Aggiungiamo 2 spazi all'inizio per non appiccicarlo al bordo fisico
-        testo += `  ${item.qta} x ${item.nome.toUpperCase()}\n`;
+        // In cucina stampiamo Nome e Quantità, senza prezzi
+        corpoCucina += `${item.qta} x ${item.nome.toUpperCase()}\n`;
     });
 
-    testo += "\n" + centraTesto("--------------------------------", LARGHEZZA) + "\n";
+    let testo = "";
+    testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto(`ORA: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`, LARGHEZZA_RIGA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
+    testo += corpoCucina;
+    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
     testo += "\n\n\n\n\n";
 
+    // --- INVIO A RAWBT ---
     const base64testo = btoa(unescape(encodeURIComponent(testo)));
     window.location.href = "rawbt:base64," + base64testo;
 }
-window.onload = () => {
-    // Carichiamo i dati dal disco PRIMA di ogni altra cosa
-    const datiSalvati = localStorage.getItem('prodotti_extra');
-    if (datiSalvati) {
-        prodottiExtra = JSON.parse(datiSalvati);
-    } else if (typeof prodotti !== 'undefined') {
-        // Solo se il disco è vuoto carichiamo dal file prodotti.js
-        prodottiExtra = [...prodotti];
-        salvaSuDisco();
-    }
-    
-    mostraCategoria('bevande'); 
-};
 
 </script>
