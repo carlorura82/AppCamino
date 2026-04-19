@@ -6,81 +6,43 @@
     <style>
         /* --- STILI INTERFACCIA --- */
         body { font-family: Arial, sans-serif; background-color: #2c3e50; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        /* BARRA CATEGORIE */
         .menu-categorie { display: flex; background-color: #34495e; padding: 10px; gap: 5px; overflow-x: auto; border-bottom: 2px solid #1a252f; }
         .menu-categorie button { padding: 12px 20px; border: none; border-radius: 4px; background-color: #ecf0f1; color: #2c3e50; font-weight: bold; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
-        
         .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
         .area-sinistra { flex: 3; display: flex; flex-direction: column; border-right: 2px solid #1a252f; position: relative; }
-        /* --- AGGIORNAMENTO CSS PER 6 COLONNE --- */
-.area-prodotti { 
-    flex: 1; 
-    display: grid; 
-    grid-template-columns: repeat(6, 1fr); /* 6 colonne invece di 4 */
-    grid-auto-rows: 65px;                  /* Altezza ridotta per tasti più piccoli */
-    gap: 6px; 
-    padding: 10px; 
-    overflow-y: auto; 
-    align-content: start;
-}
-
-.prodotto { 
-    border: none; 
-    border-radius: 4px; 
-    font-weight: bold; 
-    cursor: grab; /* Indica che l'elemento è trascinabile */
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    align-items: center; 
-    padding: 2px; 
-    text-align: center; 
-    color: white; 
-    font-size: 0.75rem; /* Testo leggermente più piccolo */
-    line-height: 0.9rem;
-}
-
-.prodotto:active { cursor: grabbing; }
-.prodotto small { font-size: 0.65rem; opacity: 0.9; }
-        
-        /* SCHERMATA TAVOLI */
+        .area-prodotti { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 65px; gap: 6px; padding: 10px; overflow-y: auto; align-content: start; }
+        .prodotto { border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2px; text-align: center; color: white; font-size: 0.75rem; line-height: 0.9rem; }
+        .prodotto small { font-size: 0.65rem; opacity: 0.9; }
         #schermata-tavoli { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #2c3e50; display: none; flex-direction: column; padding: 20px; z-index: 20; box-sizing: border-box; overflow-y: auto; }
         .sezione-titolo { background: #1a252f; padding: 10px; margin: 15px 0 5px 0; border-radius: 4px; font-weight: bold; }
         .griglia-tavoli { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         .btn-tavolo { height: 80px; border: none; border-radius: 5px; background: #27ae60; color: white; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .btn-tavolo.occupato { background: #c0392b !important; border: 2px solid white; }
         .btn-tavolo.camera-style { background: #8e44ad; }
-
-        /* AREA LATERALE ORDINE */
         .area-laterale { flex: 0.8; background-color: #ecf0f1; color: #333; padding: 15px; display: flex; flex-direction: column; }
         #lista-ordine { flex: 1; overflow-y: auto; margin-bottom: 10px; }
         .riga-item { display: flex; justify-content: space-between; padding: 12px 8px; border-bottom: 1px dashed #ccc; cursor: pointer; }
         .riga-item.selezionata { background-color: #3498db !important; color: white; border-radius: 5px; }
-
-        /* TASTIERINO */
         .display-tastierino { background: #111; color: #2ecc71; padding: 10px; text-align: right; font-family: monospace; font-size: 1.5rem; border-top: 2px solid #444; min-height: 30px; }
         .tastierino-container { display: grid; grid-template-columns: 1.2fr 2fr 1.5fr; gap: 8px; padding: 10px; background-color: #1a252f; }
         .btn-pos { height: 50px; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; background-color: #34495e; }
         .blue { background-color: #2980b9; } .orange { background-color: #f39c12; } .red { background-color: #c0392b; } .num { background-color: #ecf0f1; color: #2c3e50; }
         .green { background-color: #27ae60; } .teal { background-color: #16a085; }
-
-        .prodotto { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px; text-align: center; color: white; }
     </style>
 </head>
 <body>
 
     <nav class="menu-categorie">
-    <button onclick="mostraCategoria('bevande')">Bevande</button> 
-    <button onclick="mostraCategoria('Lista vini')">lista vini</button>
-    <button onclick="mostraCategoria('antipasti')">Antipasti</button>
-    <button onclick="mostraCategoria('primi')">Primi</button>
-    <button onclick="mostraCategoria('secondi')">Secondi</button>
-    <button onclick="mostraCategoria('dessert')">Dessert</button>
-    <button onclick="mostraCategoria('caffe')">Caffè</button>
-    <button onclick="mostraCategoria('amari')">Amari</button>
-    <button onclick="mostraCategoria('camere')">Camere</button>
-</nav>
+        <button onclick="mostraCategoria('bevande')">Bevande</button> 
+        <button onclick="mostraCategoria('Lista vini')">Lista Vini</button>
+        <button onclick="mostraCategoria('antipasti')">Antipasti</button>
+        <button onclick="mostraCategoria('primi')">Primi</button>
+        <button onclick="mostraCategoria('secondi')">Secondi</button>
+        <button onclick="mostraCategoria('dessert')">Dessert</button>
+        <button onclick="mostraCategoria('caffe')">Caffè</button>
+        <button onclick="mostraCategoria('amari')">Amari</button>
+        <button onclick="mostraCategoria('camere')">Camere</button>
+    </nav>
 
     <div class="main-container">
         <div class="area-sinistra">
@@ -111,19 +73,19 @@
             <div class="display-tastierino" id="display-tasti"></div>
             
             <div class="tastierino-container">
-                <div class="griglia-tasti" style="display:grid; grid-template-columns: 1fr; gap:4px">
+                <div style="display:grid; grid-template-columns: 1fr; gap:4px">
                     <button class="btn-pos blue" onclick="apriTavoli('selezione')">Tavoli</button>
                     <button class="btn-pos teal" onclick="aggiungiNuovoArticoloListino()">+ Voce</button>
                     <button class="btn-pos blue" onclick="strumentiRecupero()">Strumenti</button>
                     <button class="btn-pos red" onclick="chiusura()" style="background-color: #7f8c8d;">Chiusura</button>
                 </div>
-                <div class="griglia-tasti" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px">
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px">
                     <button class="btn-pos num" onclick="digita('7')">7</button><button class="btn-pos num" onclick="digita('8')">8</button><button class="btn-pos num" onclick="digita('9')">9</button>
                     <button class="btn-pos num" onclick="digita('4')">4</button><button class="btn-pos num" onclick="digita('5')">5</button><button class="btn-pos num" onclick="digita('6')">6</button>
                     <button class="btn-pos num" onclick="digita('1')">1</button><button class="btn-pos num" onclick="digita('2')">2</button><button class="btn-pos num" onclick="digita('3')">3</button>
                     <button class="btn-pos num" onclick="digita('0')">0</button><button class="btn-pos num" onclick="digita('.')">.</button><button class="btn-pos num" onclick="digita('x')">X</button>
                 </div>
-                <div class="griglia-tasti" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px">
                     <button class="btn-pos orange" onclick="cancellaBuffer()">C</button>
                     <button class="btn-pos blue" onclick="apriTavoli('sposta')">Sposta</button>
                     <button class="btn-pos green" onclick="modificaQuantita(1)">+ 1</button>
@@ -144,9 +106,10 @@
             </div>
         </div>
     </div>
-<script src="prodotti.js"></script>
+
+<script>
 // --- COSTANTI E STATO ---
-const LARGHEZZA_RIGA_STAMPA = 42; // Standard per KUBE II
+const LARGHEZZA_RIGA_STAMPA = 42; 
 
 let totaleCorrente = 0;
 let buffer = "";
@@ -160,9 +123,8 @@ let contatoreProforma = parseInt(localStorage.getItem('contatoreProforma')) || 1
 let archivioProforma = JSON.parse(localStorage.getItem('archivioProforma')) || [];
 let prodottiExtra = JSON.parse(localStorage.getItem('prodotti_extra')) || [];
 
-// --- FUNZIONE DI SUPPORTO CENTRATURA ---
 function centraTesto(testo, larghezza) {
-    let t = testo.toString();
+    let t = (testo || "").toString();
     if (t.length >= larghezza) return t.substring(0, larghezza);
     let spazi = Math.floor((larghezza - t.length) / 2);
     return " ".repeat(spazi) + t;
@@ -175,7 +137,6 @@ function salvaSuDisco() {
     localStorage.setItem('contatoreProforma', contatoreProforma);
 }
 
-// --- FUNZIONI CORE ---
 function digita(v) { buffer += v; aggiornaDisplay(); }
 function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
 function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
@@ -215,7 +176,6 @@ function renderingOrdine() {
     document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
 }
 
-// --- TAVOLI ---
 function apriTavoli(modo) {
     modalitaTavoli = modo;
     chiudiDettaglioTavolo();
@@ -244,21 +204,11 @@ function aggiornaMappa() {
 
 function selezionaTavolo(nome) {
     if (articoliInCorso.length > 0) {
-        const nuovoOrdine = { 
-            id: Date.now(), 
-            tavolo: nome, 
-            ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            articoli: [...articoliInCorso], 
-            totale: totaleCorrente 
-        };
+        const nuovoOrdine = { id: Date.now(), tavolo: nome, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), articoli: [...articoliInCorso], totale: totaleCorrente };
         ordiniArchiviati.push(nuovoOrdine);
         stampaCucina(nome, articoliInCorso);
-        salvaSuDisco();
-        svuotaOrdine();
-        chiudiTavoli();
-    } else { 
-        mostraDettaglio(nome); 
-    }
+        salvaSuDisco(); svuotaOrdine(); chiudiTavoli();
+    } else { mostraDettaglio(nome); }
 }
 
 function mostraDettaglio(nome) {
@@ -289,168 +239,73 @@ function mostraDettaglio(nome) {
 
 function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
 
-// --- FUNZIONI DI STAMPA RAWBT ---
-
 function inviaARawBT(testo) {
     const base64testo = btoa(unescape(encodeURIComponent(testo)));
     window.location.href = "rawbt:base64," + base64testo;
 }
 
-function stampaFinestra(proforma) { 
-    const LARGHEZZA_RIGA = 42; 
-    let corpoS = "";
-
-    if (!proforma.articoli || proforma.articoli.length === 0) {
-        alert("Errore: Nessun articolo da stampare");
-        return;
-    }
-
+function stampaFinestra(proforma) {
+    let testo = "";
+    testo += centraTesto("PIZZERIA DA CARLO", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
     proforma.articoli.forEach(item => {
         const q = `${item.qta}x `; 
         const p = `${(item.qta * item.prezzo).toFixed(2)}`;
-        const spazioDisponibile = LARGHEZZA_RIGA - q.length - p.length - 1;
+        const spazioDisponibile = LARGHEZZA_RIGA_STAMPA - q.length - p.length - 1;
         const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
-        const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
-        corpoS += q + n + " ".repeat(sp) + p + "\n";
+        const sp = Math.max(1, LARGHEZZA_RIGA_STAMPA - (q.length + n.length + p.length));
+        testo += q + n + " ".repeat(sp) + p + "\n";
     });
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    const rigaTot = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
+    testo += " ".repeat(LARGHEZZA_RIGA_STAMPA - rigaTot.length) + rigaTot + "\n\n";
+    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
+    inviaARawBT(testo);
+}
 
-    let testo = "";
-    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
-    testo += corpoS;
-    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
-    
-    const rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
-    testo += " ".repeat(LARGHEZZA_RIGA - rigaTotale.length) + rigaTotale + "\n\n";
-    
-    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA) + "\n";
-    testo += "\n\n\n\n\n"; 
-
-    const base64testo = btoa(unescape(encodeURIComponent(testo)));
-    window.location.href = "rawbt:base64," + base64testo;
-}function stampaCucina(nomeTavolo, articoli) {
+function stampaCucina(nomeTavolo, articoli) {
     let testo = "";
     testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA_STAMPA) + "\n";
     testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(`ORA: ${new Date().toLocaleTimeString()}`, LARGHEZZA_RIGA_STAMPA) + "\n";
     testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    articoli.forEach(item => {
-        testo += `${item.qta} x ${item.nome.toUpperCase()}\n`;
-    });
+    articoli.forEach(item => { testo += `${item.qta} x ${item.nome.toUpperCase()}\n`; });
     testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
     inviaARawBT(testo);
 }
 
 function emettiProforma() {
     if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
-    const dp = { 
-        numero: contatoreProforma, 
-        tavolo: document.getElementById('tavolo-attuale').innerText, 
-        articoli: [...articoliInCorso], 
-        totale: totaleCorrente, 
-        ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
-    };
+    const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
     stampaFinestra(dp);
     archivioProforma.push(dp);
     contatoreProforma++;
-    svuotaOrdine(); 
-    salvaSuDisco(); 
-    aggiornaMappa();
+    svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
 }
 
-function stampaSingoloDaTavolo(id) {
-    const idx = ordiniArchiviati.findIndex(o => o.id === id);
-    if (idx === -1) return;
-    const o = ordiniArchiviati[idx];
-    const dp = { 
-        numero: contatoreProforma, 
-        tavolo: o.tavolo, 
-        articoli: o.articoli, 
-        totale: o.totale, 
-        ora: o.ora 
-    };
-    stampaFinestra(dp);
-    archivioProforma.push(dp);
-    contatoreProforma++;
-    ordiniArchiviati.splice(idx, 1);
-    salvaSuDisco(); 
-    chiudiTavoli(); 
-    aggiornaMappa();
-}
-
-function emettiProformaUnificato(nomeTavolo) {
-    const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
-    let tuttiArt = []; let tot = 0;
-    ordini.forEach(o => { tuttiArt = tuttiArt.concat(o.articoli); tot += o.totale; });
-    const dp = { numero: contatoreProforma, tavolo: nomeTavolo, articoli: tuttiArt, totale: tot, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
-    stampaFinestra(dp);
-    archivioProforma.push(dp);
-    contatoreProforma++;
-    ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
-    salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
-}
-
-// --- CHIUSURA GIORNALIERA ---
 function chiusura() {
-    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-    if (!confirm("Effettuare la CHIUSURA giornaliera?")) return;
-
-    const LARG_CHIUSURA = 42;
+    if (archivioProforma.length === 0) return alert("Nessun dato!");
+    if (!confirm("Effettuare la CHIUSURA?")) return;
     let c = { RIST: 0, CAME: 0, TASS: 0 };
-    let dettagli = "";
-
+    let testo = centraTesto("CHIUSURA GIORNALIERA", LARGHEZZA_RIGA_STAMPA) + "\n";
     archivioProforma.forEach(p => {
-        if(!p.articoli) return;
         p.articoli.forEach(art => {
-            let imp = (art.prezzo || 0) * (art.qta || 0);
+            let imp = art.prezzo * art.qta;
             let rep = art.reparto || "RIST";
             if (c[rep] !== undefined) c[rep] += imp;
-            dettagli += `N.${p.numero} ${p.tavolo.toString().padEnd(10)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+            testo += `N.${p.numero} ${p.tavolo.toString().padEnd(10)} EUR ${imp.toFixed(2).padStart(8)}\n`;
         });
     });
-
-    let testoZ = "";
-    testoZ += centraTesto("CHIUSURA GIORNALIERA", LARG_CHIUSURA) + "\n";
-    testoZ += centraTesto(new Date().toLocaleDateString(), LARG_CHIUSURA) + "\n";
-    testoZ += "-".repeat(LARG_CHIUSURA) + "\n";
-    testoZ += dettagli;
-    testoZ += "-".repeat(LARG_CHIUSURA) + "\n";
-    testoZ += `TOT. RISTORANTE: EUR ${c.RIST.toFixed(2).padStart(10)}\n`;
-    testoZ += `TOT. CAMERE:     EUR ${c.CAME.toFixed(2).padStart(10)}\n`;
-    testoZ += `TOT. TASSA SOGG: EUR ${c.TASS.toFixed(2).padStart(10)}\n`;
-    testoZ += "-".repeat(LARG_CHIUSURA) + "\n";
-    testoZ += `TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2).padStart(10)}\n`;
-    testoZ += "\n\n\n\n\n";
-
-    const base64Z = btoa(unescape(encodeURIComponent(testoZ)));
-    window.location.href = "rawbt:base64," + base64Z;
-    
-    archivioProforma = []; 
-    contatoreProforma = 1; 
-    salvaSuDisco(); 
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += `GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2).padStart(10)}\n\n\n\n\n`;
+    inviaARawBT(testo);
+    archivioProforma = []; contatoreProforma = 1; salvaSuDisco();
     setTimeout(() => location.reload(), 1000);
 }
-// --- ALTRE FUNZIONI ---
-function richiama(id) {
-    const idx = ordiniArchiviati.findIndex(o => o.id === id);
-    articoliInCorso = [...ordiniArchiviati[idx].articoli];
-    document.getElementById('tavolo-attuale').innerText = ordiniArchiviati[idx].tavolo;
-    ordiniArchiviati.splice(idx, 1);
-    salvaSuDisco(); renderingOrdine(); chiudiTavoli();
-}
-
-function modificaQuantita(n) {
-    if (!idRigaSelezionata) return;
-    const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata);
-    articoliInCorso[idx].qta += n;
-    if (articoliInCorso[idx].qta <= 0) articoliInCorso.splice(idx, 1);
-    renderingOrdine();
-}
-
-function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
 
 function mostraCategoria(cat) {
     catAttuale = cat.toLowerCase().trim();
@@ -459,7 +314,6 @@ function mostraCategoria(cat) {
     griglia.innerHTML = '';
     const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
     filtrati.forEach((p) => {
-        const indexOriginale = prodottiExtra.indexOf(p);
         const btn = document.createElement('button'); 
         btn.className = 'prodotto';
         btn.style.backgroundColor = getColoreCSS(p.colore);
@@ -473,5 +327,11 @@ function getColoreCSS(c) {
     const colori = { 'azzurro': '#3498db', 'verde': '#27ae60', 'viola': '#9b59b6', 'arancione': '#e67e22', 'rosso': '#e74c3c', 'giallo': '#f1c40f' };
     return colori[c] || '#3498db';
 }
+
+function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
+function modificaQuantita(n) { if (!idRigaSelezionata) return; const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata); articoliInCorso[idx].qta += n; if (articoliInCorso[idx].qta <= 0) articoliInCorso.splice(idx, 1); renderingOrdine(); }
+
+window.onload = () => { mostraCategoria('bevande'); aggiornaMappa(); };
 </script>
-</body></html>
+</body>
+</html>
