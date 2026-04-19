@@ -391,7 +391,16 @@
             return;
         }
     }
-// --- AGGIUNTA: BOTTONE STAMPA UNIFICATA ---
+function mostraDettaglio(nome) {
+        document.getElementById('area-mappa').style.display = 'none';
+        document.getElementById('lista-scontrini-tavolo').style.display = 'block';
+        document.getElementById('nome-tavolo-dettaglio').innerText = nome;
+        const corpo = document.getElementById('corpo-scontrini');
+        corpo.innerHTML = "";
+        
+        const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
+
+        // --- AGGIUNTA: BOTTONE STAMPA UNIFICATA ---
         if (ordini.length > 1) {
             const btnU = document.createElement('button');
             btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
@@ -400,6 +409,53 @@
             corpo.appendChild(btnU);
         }
         // ------------------------------------------
+
+        ordini.forEach(o => {
+            const div = document.createElement('div');
+            div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333";
+            div.innerHTML = `<span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
+                <div>
+                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px;">Mod</button>
+                    <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:5px 10px; border-radius:3px;">Stampa</button>
+                </div>`;
+            corpo.appendChild(div);
+        });
+    }
+
+    // --- FUNZIONE UNIFICATA PER RAW BT ---
+    function emettiProformaUnificato(nomeTavolo) {
+        const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
+        let tuttiArt = []; 
+        let tot = 0;
+
+        ordini.forEach(o => { 
+            tuttiArt = tuttiArt.concat(o.articoli); 
+            tot += o.totale; 
+        });
+
+        const dp = { 
+            numero: contatoreProforma, 
+            tavolo: nomeTavolo, 
+            articoli: tuttiArt, 
+            totale: tot, 
+            ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
+        };
+
+        // Invia a Raw BT
+        stampaFinestra(dp);
+        
+        // Archivia per la chiusura serale
+        archivioProforma.push(dp);
+        contatoreProforma++;
+        
+        // Rimuove tutti gli ordini separati di quel tavolo perché ora sono chiusi
+        ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
+        
+        salvaSuDisco(); 
+        chiudiTavoli(); 
+        aggiornaMappa();
+        alert("Proforma Unificato inviato a Raw BT");
+    }
     window.onload = () => {
         const datiSalvati = localStorage.getItem('prodotti_extra');
         if (datiSalvati) prodottiExtra = JSON.parse(datiSalvati);
