@@ -145,262 +145,104 @@
         </div>
     </div>
 <script src="prodotti.js"></script>
- 
-<script>
-    // --- COSTANTI E STATO ---
-    const LARGHEZZA_RIGA = 31;
-    const MARGINE_STAMPA = "        "; 
+// --- COSTANTI E STATO ---
+const LARGHEZZA_RIGA_STAMPA = 42; // Standard per KUBE II
 
-    let totaleCorrente = 0;
-    let buffer = "";
-    let articoliInCorso = [];
-    let ordiniArchiviati = JSON.parse(localStorage.getItem('pos_data')) || []; 
-    let modalitaTavoli = 'selezione';
-    let idRigaSelezionata = null;
-    let catAttuale = 'bar';
+let totaleCorrente = 0;
+let buffer = "";
+let articoliInCorso = [];
+let ordiniArchiviati = JSON.parse(localStorage.getItem('pos_data')) || []; 
+let modalitaTavoli = 'selezione';
+let idRigaSelezionata = null;
+let catAttuale = 'bevande';
 
-    let contatoreProforma = parseInt(localStorage.getItem('contatoreProforma')) || 1;
-    let archivioProforma = JSON.parse(localStorage.getItem('archivioProforma')) || [];
-    let prodottiExtra = JSON.parse(localStorage.getItem('prodotti_extra')) || [];
+let contatoreProforma = parseInt(localStorage.getItem('contatoreProforma')) || 1;
+let archivioProforma = JSON.parse(localStorage.getItem('archivioProforma')) || [];
+let prodottiExtra = JSON.parse(localStorage.getItem('prodotti_extra')) || [];
 
-    function salvaSuDisco() { 
+// --- FUNZIONE DI SUPPORTO CENTRATURA ---
+function centraTesto(testo, larghezza) {
+    let t = testo.toString();
+    if (t.length >= larghezza) return t.substring(0, larghezza);
+    let spazi = Math.floor((larghezza - t.length) / 2);
+    return " ".repeat(spazi) + t;
+}
+
+function salvaSuDisco() { 
     localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
     localStorage.setItem('pos_data', JSON.stringify(ordiniArchiviati));
     localStorage.setItem('archivioProforma', JSON.stringify(archivioProforma));
     localStorage.setItem('contatoreProforma', contatoreProforma);
 }
-function strumentiRecupero() {
-    // 1. Controlliamo se c'è un numero nel buffer (il display dei tasti)
-    if (buffer !== "" && !buffer.includes('x')) {
-        const numScelto = parseInt(buffer);
-        const idx = archivioProforma.findIndex(p => p.numero === numScelto);
 
-        if (idx !== -1) {
-            // Se troviamo il proforma, lo carichiamo in modifica
-            const p = archivioProforma[idx];
-            
-            // Portiamo gli articoli nel carrello
-            articoliInCorso = [...p.articoli];
-            document.getElementById('tavolo-attuale').innerText = p.tavolo;
-            
-            // Lo rimuoviamo dall'archivio (perché verrà ri-emesso con lo stesso o nuovo numero)
-            archivioProforma.splice(idx, 1);
-            
-            // Reset interfaccia
-            salvaSuDisco();
-            renderingOrdine();
-            cancellaBuffer();
-            
-            // Se la schermata tavoli è aperta, la chiudiamo
-            chiudiTavoli();
-            
-            alert(`Proforma N.${numScelto} caricato in modifica.`);
-        } else {
-            alert(`Errore: Proforma N.${numScelto} non trovato in archivio.`);
-            cancellaBuffer();
-        }
-        return; // Esci dalla funzione
-    }
+// --- FUNZIONI CORE ---
+function digita(v) { buffer += v; aggiornaDisplay(); }
+function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
+function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
 
-    // 2. Se il buffer è VUOTO, mostra il menu strumenti classico (Backup, etc.)
-    const scelta = prompt(
-        "MENU STRUMENTI (Digita un numero prima per modificare un proforma):\n" +
-        "1. Ristampa ultimo Proforma\n" +
-        "2. Esporta Backup Giornata\n" +
-        "3. Importa Backup\n" +
-        "4. Reset totale sistema"
-    );
-
-    if (scelta === "1") {
-        if (archivioProforma.length > 0) stampaFinestra(archivioProforma[archivioProforma.length - 1]);
-    } else if (scelta === "2") {
-        const data = { pExtra: prodottiExtra, arch: ordiniArchiviati, prof: archivioProforma, cont: contatoreProforma };
-        const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `backup_${new Date().toLocaleDateString()}.json`;
-        a.click();
-    } else if (scelta === "3") {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.onchange = e => {
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const d = JSON.parse(ev.target.result);
-                prodottiExtra = d.pExtra || [];
-                ordiniArchiviati = d.arch || [];
-                archivioProforma = d.prof || [];
-                contatoreProforma = d.cont || 1;
-                salvaSuDisco(); location.reload();
-            };
-            reader.readAsText(e.target.files[0]);
-        };
-        input.click();
-    }
-}
-    // --- FUNZIONI CORE ---
-    function digita(v) { buffer += v; aggiornaDisplay(); }
-    function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
-    function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
-
-    function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
-        let qta = 1, prezzoFinale = prezzoBase;
-        if (buffer && buffer !== "") {
-            if (buffer.includes('x')) {
-                let parti = buffer.split('x');
-                qta = parseFloat(parti[0]) || 1;
-                if (parti[1] && parti[1] !== "") prezzoFinale = parseFloat(parti[1]);
-            } else { 
-                prezzoFinale = parseFloat(buffer) || prezzoBase; 
-            }
-        }
-        articoliInCorso.push({ 
-            id: Date.now() + Math.random(), 
-            nome: nome, prezzo: prezzoFinale, qta: qta, reparto: reparto || 'RIST'
-        });
-        renderingOrdine();
-        cancellaBuffer();
-    }
-
-    function renderingOrdine() {
-        const lista = document.getElementById('lista-ordine');
-        if(!lista) return;
-        lista.innerHTML = ""; totaleCorrente = 0;
-        articoliInCorso.forEach(item => {
-            const subTot = item.qta * item.prezzo;
-            const div = document.createElement('div');
-            div.className = `riga-item ${idRigaSelezionata === item.id ? 'selezionata' : ''}`;
-            div.onclick = () => { idRigaSelezionata = (idRigaSelezionata === item.id) ? null : item.id; renderingOrdine(); };
-            div.innerHTML = `<span>${item.qta} x ${item.nome}</span><b>${subTot.toFixed(2)} €</b>`;
-            lista.appendChild(div);
-            totaleCorrente += subTot;
-        });
-        document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
-    }
-
-    // --- GESTIONE LISTINO ---
-    function eliminaProdotto(index) {
-        if (confirm("Vuoi eliminare questo prodotto?")) {
-            prodottiExtra.splice(index, 1);
-            salvaSuDisco();
-            mostraCategoria(catAttuale);
+function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
+    let qta = 1, prezzoFinale = prezzoBase;
+    if (buffer && buffer !== "") {
+        if (buffer.includes('x')) {
+            let parti = buffer.split('x');
+            qta = parseFloat(parti[0]) || 1;
+            if (parti[1] && parti[1] !== "") prezzoFinale = parseFloat(parti[1]);
+        } else { 
+            prezzoFinale = parseFloat(buffer) || prezzoBase; 
         }
     }
-
-    function modificaProdotto(index) {
-        const p = prodottiExtra[index];
-        const nuovoNome = prompt("Nome:", p.nome);
-        if (!nuovoNome) return;
-        const nuovoPrezzo = parseFloat(prompt("Prezzo:", p.prezzo).replace(',', '.'));
-        if (isNaN(nuovoPrezzo)) return alert("Errore prezzo");
-        prodottiExtra[index].nome = nuovoNome;
-        prodottiExtra[index].prezzo = nuovoPrezzo;
-        salvaSuDisco();
-        mostraCategoria(catAttuale);
-    }
-
-    // --- LOGICA TRASCINAMENTO ---
-let indexTrascinato = null;
-
-function mostraCategoria(cat) {
-    catAttuale = cat.toLowerCase().trim();
-    const griglia = document.getElementById('griglia-prodotti'); 
-    if(!griglia) return;
-    griglia.innerHTML = '';
-
-    // Filtriamo i prodotti della categoria attuale
-    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
-
-    filtrati.forEach((p) => {
-        const indexOriginale = prodottiExtra.indexOf(p);
-        const btn = document.createElement('button'); 
-        btn.className = 'prodotto';
-        btn.style.backgroundColor = getColoreCSS(p.colore);
-        
-        // Rendiamo il tasto trascinabile
-        btn.setAttribute('draggable', true);
-
-        // --- EVENTI DRAG & DROP ---
-        btn.ondragstart = (e) => {
-            indexTrascinato = indexOriginale;
-            e.target.style.opacity = "0.4";
-        };
-
-        btn.ondragend = (e) => {
-            e.target.style.opacity = "1";
-            indexTrascinato = null;
-        };
-
-        btn.ondragover = (e) => e.preventDefault(); // Permette il drop
-
-        btn.ondrop = (e) => {
-            e.preventDefault();
-            if (indexTrascinato !== null && indexTrascinato !== indexOriginale) {
-                // Spostiamo l'elemento nell'array principale
-                const elemento = prodottiExtra.splice(indexTrascinato, 1)[0];
-                prodottiExtra.splice(indexOriginale, 0, elemento);
-                
-                salvaSuDisco();
-                mostraCategoria(catAttuale); // Ricarica la griglia ordinata
-            }
-        };
-
-        // --- ALTRE FUNZIONI ---
-        btn.onclick = () => aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-        
-        btn.oncontextmenu = (e) => {
-            e.preventDefault();
-            if(confirm("Modificare " + p.nome + "?")) modificaProdotto(indexOriginale);
-            else eliminaProdotto(indexOriginale);
-        };
-
-        btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
-        griglia.appendChild(btn);
+    articoliInCorso.push({ 
+        id: Date.now() + Math.random(), 
+        nome: nome, prezzo: prezzoFinale, qta: qta, reparto: reparto || 'RIST'
     });
+    renderingOrdine();
+    cancellaBuffer();
 }
 
-    function getColoreCSS(c) {
-    const colori = { 
-        'azzurro': '#3498db', 
-        'verde': '#27ae60', 
-        'viola': '#9b59b6', 
-        'arancione': '#e67e22', 
-        'rosso': '#e74c3c', 
-        'giallo': '#f1c40f',
-        'viola-scuro': '#8e44ad' 
+function renderingOrdine() {
+    const lista = document.getElementById('lista-ordine');
+    if(!lista) return;
+    lista.innerHTML = ""; totaleCorrente = 0;
+    articoliInCorso.forEach(item => {
+        const subTot = item.qta * item.prezzo;
+        const div = document.createElement('div');
+        div.className = `riga-item ${idRigaSelezionata === item.id ? 'selezionata' : ''}`;
+        div.onclick = () => { idRigaSelezionata = (idRigaSelezionata === item.id) ? null : item.id; renderingOrdine(); };
+        div.innerHTML = `<span>${item.qta} x ${item.nome}</span><b>${subTot.toFixed(2)} €</b>`;
+        lista.appendChild(div);
+        totaleCorrente += subTot;
+    });
+    document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
+}
+
+// --- TAVOLI ---
+function apriTavoli(modo) {
+    modalitaTavoli = modo;
+    chiudiDettaglioTavolo();
+    document.getElementById('schermata-tavoli').style.display = 'flex';
+    aggiornaMappa();
+}
+function chiudiTavoli() { document.getElementById('schermata-tavoli').style.display = 'none'; }
+
+function aggiornaMappa() {
+    const sala = document.getElementById('tavoli-sala'), terr = document.getElementById('tavoli-terrazza'), cam = document.getElementById('tavoli-camere');
+    sala.innerHTML = ""; terr.innerHTML = ""; cam.innerHTML = "";
+    const creaBtn = (pref, i, cont, cl = "") => {
+        const n = `${pref} ${i}`;
+        const ords = ordiniArchiviati.filter(o => o.tavolo === n);
+        const t = ords.reduce((s, o) => s + (o.totale || 0), 0);
+        const btn = document.createElement('button');
+        btn.className = `btn-tavolo ${cl} ${ords.length > 0 ? 'occupato' : ''}`;
+        btn.onclick = () => selezionaTavolo(n);
+        btn.innerHTML = `<span>${pref} ${i}</span>${ords.length > 0 ? `<b>${t.toFixed(2)}€</b>` : ''}`;
+        cont.appendChild(btn);
     };
-    return colori[c] || '#3498db'; // Se non trova il colore, usa l'azzurro di default
+    for(let i=1; i<=10; i++) creaBtn('Sala', i, sala);
+    for(let i=14; i<=21; i++) creaBtn('Terr.', i, terr);
+    for(let i=1; i<=7; i++) creaBtn('Cam.', i, cam, 'camera-style');
 }
 
-    // --- TAVOLI ---
-    function apriTavoli(modo) {
-        modalitaTavoli = modo;
-        chiudiDettaglioTavolo();
-        document.getElementById('schermata-tavoli').style.display = 'flex';
-        aggiornaMappa();
-    }
-    function chiudiTavoli() { document.getElementById('schermata-tavoli').style.display = 'none'; }
-
-    function aggiornaMappa() {
-        const sala = document.getElementById('tavoli-sala'), terr = document.getElementById('tavoli-terrazza'), cam = document.getElementById('tavoli-camere');
-        sala.innerHTML = ""; terr.innerHTML = ""; cam.innerHTML = "";
-        const creaBtn = (pref, i, cont, cl = "") => {
-            const n = `${pref} ${i}`;
-            const ords = ordiniArchiviati.filter(o => o.tavolo === n);
-            const t = ords.reduce((s, o) => s + (o.totale || 0), 0);
-            const btn = document.createElement('button');
-            btn.className = `btn-tavolo ${cl} ${ords.length > 0 ? 'occupato' : ''}`;
-            btn.onclick = () => selezionaTavolo(n);
-            btn.innerHTML = `<span>${pref} ${i}</span>${ords.length > 0 ? `<b>${t.toFixed(2)}€</b>` : ''}`;
-            cont.appendChild(btn);
-        };
-        for(let i=1; i<=10; i++) creaBtn('Sala', i, sala);
-        for(let i=14; i<=21; i++) creaBtn('Terr.', i, terr);
-        for(let i=1; i<=7; i++) creaBtn('Cam.', i, cam, 'camera-style');
-    }
-
-   function selezionaTavolo(nome) {
-    // Se ci sono articoli in corso, li "appoggiamo" sul tavolo scelto
+function selezionaTavolo(nome) {
     if (articoliInCorso.length > 0) {
         const nuovoOrdine = { 
             id: Date.now(), 
@@ -409,81 +251,120 @@ function mostraCategoria(cat) {
             articoli: [...articoliInCorso], 
             totale: totaleCorrente 
         };
-
-        // 1. Salviamo l'ordine sul tavolo
         ordiniArchiviati.push(nuovoOrdine);
-        
-        // 2. STAMPA AUTOMATICA PER LA CUCINA
         stampaCucina(nome, articoliInCorso);
-        
-        // 3. Pulizia e chiusura
         salvaSuDisco();
         svuotaOrdine();
         chiudiTavoli();
-        alert("Ordine inviato a " + nome + " e stampato in cucina.");
     } else { 
-        // Se il carrello è vuoto, mostriamo solo cosa c'è già sul tavolo
         mostraDettaglio(nome); 
     }
 }
 
-    function mostraDettaglio(nome) {
-        document.getElementById('area-mappa').style.display = 'none';
-        document.getElementById('lista-scontrini-tavolo').style.display = 'block';
-        document.getElementById('nome-tavolo-dettaglio').innerText = nome;
-        const corpo = document.getElementById('corpo-scontrini');
-        corpo.innerHTML = "";
-        const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
-        if (ordini.length > 1) {
-            const btnU = document.createElement('button');
-            btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
-            btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer;";
-            btnU.onclick = () => emettiProformaUnificato(nome);
-            corpo.appendChild(btnU);
-        }
-        ordini.forEach(o => {
-            const div = document.createElement('div');
-            div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333";
-            div.innerHTML = `<span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
-                <div>
-                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px;">Mod</button>
-                    <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:5px 10px; border-radius:3px;">Stampa</button>
-                </div>`;
-            corpo.appendChild(div);
-        });
+function mostraDettaglio(nome) {
+    document.getElementById('area-mappa').style.display = 'none';
+    document.getElementById('lista-scontrini-tavolo').style.display = 'block';
+    document.getElementById('nome-tavolo-dettaglio').innerText = nome;
+    const corpo = document.getElementById('corpo-scontrini');
+    corpo.innerHTML = "";
+    const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
+    if (ordini.length > 1) {
+        const btnU = document.createElement('button');
+        btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
+        btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer;";
+        btnU.onclick = () => emettiProformaUnificato(nome);
+        corpo.appendChild(btnU);
     }
+    ordini.forEach(o => {
+        const div = document.createElement('div');
+        div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333";
+        div.innerHTML = `<span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
+            <div>
+                <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px;">Mod</button>
+                <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:5px 10px; border-radius:3px;">Stampa</button>
+            </div>`;
+        corpo.appendChild(div);
+    });
+}
 
-    function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
+function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
 
-    // --- FUNZIONI DI STAMPA (CORRETTE) ---
-    function emettiProforma() {
-        if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
-        const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-        stampaFinestra(dp);
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
-    }
+// --- FUNZIONI DI STAMPA RAWBT ---
+
+function inviaARawBT(testo) {
+    const base64testo = btoa(unescape(encodeURIComponent(testo)));
+    window.location.href = "rawbt:base64," + base64testo;
+}
+
+function stampaFinestra(proforma) {
+    let testo = "";
+    testo += centraTesto("PIZZERIA DA CARLO", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+
+    proforma.articoli.forEach(item => {
+        const q = `${item.qta}x `; 
+        const p = `${(item.qta * item.prezzo).toFixed(2)}`;
+        const spazioDisponibile = LARGHEZZA_RIGA_STAMPA - q.length - p.length - 1;
+        const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
+        const sp = Math.max(1, LARGHEZZA_RIGA_STAMPA - (q.length + n.length + p.length));
+        testo += q + n + " ".repeat(sp) + p + "\n";
+    });
+
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    const rigaTot = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
+    testo += " ".repeat(LARGHEZZA_RIGA_STAMPA - rigaTot.length) + rigaTot + "\n\n";
+    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
+
+    inviaARawBT(testo);
+}
+
+function stampaCucina(nomeTavolo, articoli) {
+    let testo = "";
+    testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`ORA: ${new Date().toLocaleTimeString()}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    articoli.forEach(item => {
+        testo += `${item.qta} x ${item.nome.toUpperCase()}\n`;
+    });
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
+    inviaARawBT(testo);
+}
+
+function emettiProforma() {
+    if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
+    const dp = { 
+        numero: contatoreProforma, 
+        tavolo: document.getElementById('tavolo-attuale').innerText, 
+        articoli: [...articoliInCorso], 
+        totale: totaleCorrente, 
+        ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+    };
+    stampaFinestra(dp);
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    svuotaOrdine(); 
+    salvaSuDisco(); 
+    aggiornaMappa();
+}
 
 function stampaSingoloDaTavolo(id) {
     const idx = ordiniArchiviati.findIndex(o => o.id === id);
     if (idx === -1) return;
-    
     const o = ordiniArchiviati[idx];
-    
-    // Creiamo l'oggetto per la stampa assicurandoci che i valori siano numeri
     const dp = { 
-        numero: contatoreProforma || 0, 
-        tavolo: o.tavolo || "Tavolo", 
-        articoli: o.articoli || [], 
-        totale: parseFloat(o.totale) || 0, 
-        ora: o.ora || new Date().toLocaleTimeString() 
+        numero: contatoreProforma, 
+        tavolo: o.tavolo, 
+        articoli: o.articoli, 
+        totale: o.totale, 
+        ora: o.ora 
     };
-
-    // Lanciamo la stampa
     stampaFinestra(dp);
-
-    // Procediamo con l'archiviazione
     archivioProforma.push(dp);
     contatoreProforma++;
     ordiniArchiviati.splice(idx, 1);
@@ -492,183 +373,88 @@ function stampaSingoloDaTavolo(id) {
     aggiornaMappa();
 }
 
-    function emettiProformaUnificato(nomeTavolo) {
-        const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
-        let tuttiArt = []; let tot = 0;
-        ordini.forEach(o => { tuttiArt = tuttiArt.concat(o.articoli); tot += o.totale; });
-        const dp = { numero: contatoreProforma, tavolo: nomeTavolo, articoli: tuttiArt, totale: tot, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
-        stampaFinestra(dp);
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
-        salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
-    }
-
-    function stampaFinestra(proforma) { 
-    const LARGHEZZA_RIGA = 42; 
-    let corpoS = "";
-
-    // Verifica se ci sono articoli, altrimenti la funzione si blocca qui
-    if (!proforma.articoli || proforma.articoli.length === 0) {
-        alert("Errore: Nessun articolo da stampare");
-        return;
-    }
-
-    proforma.articoli.forEach(item => {
-        const q = `${item.qta}x `; 
-        const p = `${(item.qta * item.prezzo).toFixed(2)}`;
-        // Calcoliamo quanto spazio resta per il nome
-        const spazioDisponibile = LARGHEZZA_RIGA - q.length - p.length - 1;
-        const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
-        
-        // Calcolo spazi per allineare il prezzo a destra
-        const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
-        corpoS += q + n + " ".repeat(sp) + p + "\n";
-    });
-
-    // Costruzione stringa finale
-    let testo = "";
-    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
-    testo += corpoS;
-    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
-    
-    const rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
-    testo += " ".repeat(LARGHEZZA_RIGA - rigaTotale.length) + rigaTotale + "\n\n";
-    
-    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA) + "\n";
-    testo += "\n\n\n\n\n"; // Spazio per il taglio carta
-
-    // --- INVIO A RAWBT (Sostituisce window.print) ---
-    const base64testo = btoa(unescape(encodeURIComponent(testo)));
-    window.location.href = "rawbt:base64," + base64testo;
+function emettiProformaUnificato(nomeTavolo) {
+    const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
+    let tuttiArt = []; let tot = 0;
+    ordini.forEach(o => { tuttiArt = tuttiArt.concat(o.articoli); tot += o.totale; });
+    const dp = { numero: contatoreProforma, tavolo: nomeTavolo, articoli: tuttiArt, totale: tot, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+    stampaFinestra(dp);
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
+    salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
 }
 
-// Funzione di supporto necessaria (se non l'hai già inserita)
-function centraTesto(testo, larghezza) {
-    if (testo.length >= larghezza) return testo;
-    let spazi = Math.floor((larghezza - testo.length) / 2);
-    return " ".repeat(spazi) + testo;
-}
+// --- CHIUSURA GIORNALIERA ---
+function chiusura() {
+    if (archivioProforma.length === 0) return alert("Nessun dato!");
+    if (!confirm("Effettuare la CHIUSURA?")) return;
 
-    // --- ALTRE FUNZIONI ---
-function aggiungiNuovoArticoloListino() {
-    const nome = prompt("Nome Dessert:"); 
-    if(!nome) return;
-    
-    const prezzoInput = prompt("Prezzo:", "0.00");
-    if(prezzoInput === null) return;
-    const prezzo = parseFloat(prezzoInput.replace(',', '.'));
-
-    // Suggerisce la categoria in cui ti trovi (es. dessert)
-    let cat = prompt("Categoria (bevande, vini, dessert...):", catAttuale); 
-    if(!cat) return;
-    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
-
-    prodottiExtra.push({ 
-        nome: nome, 
-        prezzo: prezzo, 
-        cat: cat, 
-        reparto: 'RIST', 
-        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
-    });
-
-    salvaSuDisco(); 
-    mostraCategoria(cat); 
-}
-
-    function richiama(id) {
-        const idx = ordiniArchiviati.findIndex(o => o.id === id);
-        articoliInCorso = [...ordiniArchiviati[idx].articoli];
-        document.getElementById('tavolo-attuale').innerText = ordiniArchiviati[idx].tavolo;
-        ordiniArchiviati.splice(idx, 1);
-        salvaSuDisco(); renderingOrdine(); chiudiTavoli();
-const lista = document.getElementById('lista-ordine');
-lista.scrollTop = lista.scrollHeight;
-    }
-
-    function modificaQuantita(n) {
-        if (!idRigaSelezionata) return;
-        const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata);
-        articoliInCorso[idx].qta += n;
-        if (articoliInCorso[idx].qta <= 0) articoliInCorso.splice(idx, 1);
-        renderingOrdine();
-    }
-
-    function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
-
-   function chiusura() {
-    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-    if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
-
-    // Inizializziamo i totali per reparto
     let c = { RIST: 0, CAME: 0, TASS: 0 };
-    let d = { RIST: "", CAME: "", TASS: "" };
+    let testo = centraTesto("CHIUSURA GIORNALIERA", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(new Date().toLocaleDateString(), LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
 
-    // Elaboriamo ogni proforma salvato durante il giorno
     archivioProforma.forEach(p => {
-        if(!p.articoli) return;
         p.articoli.forEach(art => {
-            let imp = (art.prezzo || 0) * (art.qta || 0);
+            let imp = art.prezzo * art.qta;
             let rep = art.reparto || "RIST";
-            
-            // Sicurezza: se il reparto non è tra quelli previsti, lo mette in RIST
-            if (!c.hasOwnProperty(rep)) rep = "RIST";
-            
-            c[rep] += imp;
-            d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+            if (c[rep] !== undefined) c[rep] += imp;
+            testo += `N.${p.numero} ${p.tavolo.toString().padEnd(10)} EUR ${imp.toFixed(2).padStart(8)}\n`;
         });
     });
 
-    const win = window.open('', '', 'height=700,width=450');
-    let html = `<html><head><style>body{font-family:monospace; font-size:10pt;} pre{margin:0;}</style></head><body><pre>
-${MARGINE_STAMPA}CHIUSURA DEL ${new Date().toLocaleDateString()}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}** RISTORANTE/BAR **
-${d.RIST || MARGINE_STAMPA + "(nessuna voce)\n"}${MARGINE_STAMPA}TOTALE RIST: EUR ${c.RIST.toFixed(2).padStart(8)}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}** CAMERE **
-${d.CAME || MARGINE_STAMPA + "(nessuna voce)\n"}${MARGINE_STAMPA}TOTALE CAME: EUR ${c.CAME.toFixed(2).padStart(8)}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}** TASSA SOGGIORNO **
-${d.TASS || MARGINE_STAMPA + "(nessuna voce)\n"}${MARGINE_STAMPA}TOTALE TASS: EUR ${c.TASS.toFixed(2).padStart(8)}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2)}
-\n\n\n\n</pre><script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);};<\/script></body></html>`;
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += `TOTALE RIST: EUR ${c.RIST.toFixed(2).padStart(10)}\n`;
+    testo += `TOTALE CAME: EUR ${c.CAME.toFixed(2).padStart(10)}\n`;
+    testo += `TOTALE TASS: EUR ${c.TASS.toFixed(2).padStart(10)}\n`;
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += `GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2).padStart(10)}\n\n\n\n\n`;
 
-    win.document.write(html); 
-    win.document.close();
+    inviaARawBT(testo);
     
-    // Pulizia finale e reset
-    archivioProforma = []; 
-    contatoreProforma = 1; 
-    salvaSuDisco(); 
-    location.reload();
+    archivioProforma = []; contatoreProforma = 1; salvaSuDisco();
+    setTimeout(() => location.reload(), 1000);
 }
-function stampaCucina(nomeTavolo, articoli) {
-    const LARGHEZZA_RIGA = 42;
-    let corpoCucina = "";
-    
-    articoli.forEach(item => {
-        // In cucina stampiamo Nome e Quantità, senza prezzi
-        corpoCucina += `${item.qta} x ${item.nome.toUpperCase()}\n`;
+
+// --- ALTRE FUNZIONI ---
+function richiama(id) {
+    const idx = ordiniArchiviati.findIndex(o => o.id === id);
+    articoliInCorso = [...ordiniArchiviati[idx].articoli];
+    document.getElementById('tavolo-attuale').innerText = ordiniArchiviati[idx].tavolo;
+    ordiniArchiviati.splice(idx, 1);
+    salvaSuDisco(); renderingOrdine(); chiudiTavoli();
+}
+
+function modificaQuantita(n) {
+    if (!idRigaSelezionata) return;
+    const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata);
+    articoliInCorso[idx].qta += n;
+    if (articoliInCorso[idx].qta <= 0) articoliInCorso.splice(idx, 1);
+    renderingOrdine();
+}
+
+function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
+
+function mostraCategoria(cat) {
+    catAttuale = cat.toLowerCase().trim();
+    const griglia = document.getElementById('griglia-prodotti'); 
+    if(!griglia) return;
+    griglia.innerHTML = '';
+    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
+    filtrati.forEach((p) => {
+        const indexOriginale = prodottiExtra.indexOf(p);
+        const btn = document.createElement('button'); 
+        btn.className = 'prodotto';
+        btn.style.backgroundColor = getColoreCSS(p.colore);
+        btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
+        btn.onclick = () => aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
+        griglia.appendChild(btn);
     });
-
-    let testo = "";
-    testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA) + "\n";
-    testo += centraTesto(`ORA: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`, LARGHEZZA_RIGA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
-    testo += corpoCucina;
-    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
-    testo += "\n\n\n\n\n";
-
-    // --- INVIO A RAWBT ---
-    const base64testo = btoa(unescape(encodeURIComponent(testo)));
-    window.location.href = "rawbt:base64," + base64testo;
 }
 
+function getColoreCSS(c) {
+    const colori = { 'azzurro': '#3498db', 'verde': '#27ae60', 'viola': '#9b59b6', 'arancione': '#e67e22', 'rosso': '#e74c3c', 'giallo': '#f1c40f' };
+    return colori[c] || '#3498db';
+}
 </script>
