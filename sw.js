@@ -1,23 +1,24 @@
-const CACHE_NAME = 'pos-v1';
-// Usa percorsi relativi (./) per evitare il 404 su GitHub Pages
+const CACHE_NAME = 'pos-v2';
 const assets = [
   './',
   './index.html',
   './manifest.json'
 ];
 
+// Installa e forza l'attivazione
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(assets);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(assets))
   );
+  self.skipWaiting(); 
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim()); 
 });
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
