@@ -277,7 +277,75 @@ function stampaCucina(nomeTavolo, articoli) {
     testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
     inviaARawBT(testo);
 }
+// --- FUNZIONI DI INVIO ALLA STAMPANTE ---
 
+function inviaARawBT(testo) {
+    try {
+        const base64testo = btoa(unescape(encodeURIComponent(testo)));
+        window.location.href = "rawbt:base64," + base64testo;
+    } catch (e) {
+        console.error("Errore codifica RawBT:", e);
+        alert("Errore durante l'invio alla stampante.");
+    }
+}
+
+function stampaFinestra(proforma) {
+    if (!proforma) return;
+    
+    let testo = "";
+    testo += centraTesto("PIZZERIA DA CARLO", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+
+    proforma.articoli.forEach(item => {
+        const q = `${item.qta}x `; 
+        const p = `${(item.qta * item.prezzo).toFixed(2)}`;
+        const spazioDisponibile = LARGHEZZA_RIGA_STAMPA - q.length - p.length - 1;
+        const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
+        const sp = Math.max(1, LARGHEZZA_RIGA_STAMPA - (q.length + n.length + p.length));
+        testo += q + n + " ".repeat(sp) + p + "\n";
+    });
+
+    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    const rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
+    testo += " ".repeat(LARGHEZZA_RIGA_STAMPA - rigaTotale.length) + rigaTotale + "\n\n";
+    
+    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA_STAMPA) + "\n";
+    testo += "\n\n\n\n\n"; 
+
+    inviaARawBT(testo);
+}
+
+function emettiProforma() {
+    const tavAttuale = document.getElementById('tavolo-attuale').innerText;
+    if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
+    
+    const dp = { 
+        numero: contatoreProforma, 
+        tavolo: tavAttuale, 
+        articoli: [...articoliInCorso], 
+        totale: totaleCorrente, 
+        ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+    };
+
+    stampaFinestra(dp); // Questa è la chiamata che prima falliva
+    
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    
+    svuotaOrdine(); 
+    salvaSuDisco(); 
+    aggiornaMappa();
+}
+
+// Assicurati che queste chiusure siano presenti alla fine del file
+</script>
+</body>
+</html>
 function emettiProforma() {
     if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
     const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
