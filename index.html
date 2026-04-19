@@ -600,26 +600,27 @@ ${MARGINE_STAMPA}TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2)}
     location.reload();
 }
 function stampaCucina(nomeTavolo, articoli) {
-    const win = window.open('', '', 'height=600,width=400');
-    let corpoCucina = "";
-    
+    // 1. Prepariamo l'intestazione
+    let testo = "--------------------------------\n";
+    testo += "      *** CUCINA ***\n";
+    testo += "--------------------------------\n";
+    testo += `TAVOLO: ${nomeTavolo}\n`;
+    testo += `ORA:    ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}\n`;
+    testo += "--------------------------------\n\n";
+
+    // 2. Aggiungiamo i piatti (Quantità e Nome in maiuscolo)
     articoli.forEach(item => {
-        // In cucina stampiamo solo Nome e Quantità, molto grande
-        corpoCucina += `${MARGINE_STAMPA}${item.qta} x ${item.nome.toUpperCase()}\n`;
+        // Formattiamo: es. "2 x PIZZA MARGHERITA"
+        testo += `${item.qta} x ${item.nome.toUpperCase()}\n`;
     });
 
-    let html = `<html><body style="font-family:monospace;white-space:pre">
-${MARGINE_STAMPA}--- ORDINE CUCINA ---
-${MARGINE_STAMPA}TAVOLO: ${nomeTavolo}
-${MARGINE_STAMPA}ORA: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}
-${corpoCucina}
-${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}
-\n\n\n\n\n
-<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);};<\/script></body></html>`;
-    
-    win.document.write(html);
-    win.document.close();
+    // 3. Spazio finale per il taglio carta
+    testo += "\n--------------------------------\n";
+    testo += "\n\n\n\n\n";
+
+    // 4. INVIO DIRETTO A RAWBT (Senza aprire finestre o PDF)
+    const base64testo = btoa(unescape(encodeURIComponent(testo)));
+    window.location.href = "rawbt:base64," + base64testo;
 }
 window.onload = () => {
     // Carichiamo i dati dal disco PRIMA di ogni altra cosa
