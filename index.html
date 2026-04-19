@@ -489,9 +489,15 @@ function mostraCategoria(cat) {
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
 
-    function stampaFinestra(proforma) {
-    const LARGHEZZA_RIGA = 42; // Ottimale per KUBE II
+    function stampaFinestra(proforma) { 
+    const LARGHEZZA_RIGA = 42; 
     let corpoS = "";
+
+    // Verifica se ci sono articoli, altrimenti la funzione si blocca qui
+    if (!proforma.articoli || proforma.articoli.length === 0) {
+        alert("Errore: Nessun articolo da stampare");
+        return;
+    }
 
     proforma.articoli.forEach(item => {
         const q = `${item.qta}x `; 
