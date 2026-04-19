@@ -599,26 +599,33 @@ ${MARGINE_STAMPA}TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2)}
     salvaSuDisco(); 
     location.reload();
 }
+function centraTesto(testo, larghezza = 42) {
+    if (testo.length >= larghezza) return testo;
+    let spazi = Math.floor((larghezza - testo.length) / 2);
+    return " ".repeat(spazi) + testo;
+}
+
 function stampaCucina(nomeTavolo, articoli) {
-    // 1. Prepariamo l'intestazione
-    let testo = "--------------------------------\n";
-    testo += "      *** CUCINA ***\n";
-    testo += "--------------------------------\n";
-    testo += `TAVOLO: ${nomeTavolo}\n`;
-    testo += `ORA:    ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}\n`;
+    const LARGHEZZA = 42; // Standard per KUBE II
+    let testo = "";
+
+    // Intestazione centrata
+    testo += centraTesto("--------------------------------", LARGHEZZA) + "\n";
+    testo += centraTesto("*** ORDINE CUCINA ***", LARGHEZZA) + "\n";
+    testo += centraTesto("--------------------------------", LARGHEZZA) + "\n";
+    testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA) + "\n";
+    testo += centraTesto(`ORA: ${new Date().toLocaleTimeString()}`, LARGHEZZA) + "\n";
     testo += "--------------------------------\n\n";
 
-    // 2. Aggiungiamo i piatti (Quantità e Nome in maiuscolo)
+    // Articoli (allineati a sinistra ma con un piccolo margine se vuoi)
     articoli.forEach(item => {
-        // Formattiamo: es. "2 x PIZZA MARGHERITA"
-        testo += `${item.qta} x ${item.nome.toUpperCase()}\n`;
+        // Aggiungiamo 2 spazi all'inizio per non appiccicarlo al bordo fisico
+        testo += `  ${item.qta} x ${item.nome.toUpperCase()}\n`;
     });
 
-    // 3. Spazio finale per il taglio carta
-    testo += "\n--------------------------------\n";
+    testo += "\n" + centraTesto("--------------------------------", LARGHEZZA) + "\n";
     testo += "\n\n\n\n\n";
 
-    // 4. INVIO DIRETTO A RAWBT (Senza aprire finestre o PDF)
     const base64testo = btoa(unescape(encodeURIComponent(testo)));
     window.location.href = "rawbt:base64," + base64testo;
 }
