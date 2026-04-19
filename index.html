@@ -4,83 +4,46 @@
     <meta charset="UTF-8">
     <title>POS Ristorante - Custom KUBE II</title>
     <style>
-        /* --- STILI INTERFACCIA --- */
+        /* --- STILI INTERFACCIA (Invariati) --- */
         body { font-family: Arial, sans-serif; background-color: #2c3e50; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        /* BARRA CATEGORIE */
         .menu-categorie { display: flex; background-color: #34495e; padding: 10px; gap: 5px; overflow-x: auto; border-bottom: 2px solid #1a252f; }
         .menu-categorie button { padding: 12px 20px; border: none; border-radius: 4px; background-color: #ecf0f1; color: #2c3e50; font-weight: bold; cursor: pointer; text-transform: uppercase; white-space: nowrap; }
-        
         .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
         .area-sinistra { flex: 3; display: flex; flex-direction: column; border-right: 2px solid #1a252f; position: relative; }
-        /* --- AGGIORNAMENTO CSS PER 6 COLONNE --- */
-.area-prodotti { 
-    flex: 1; 
-    display: grid; 
-    grid-template-columns: repeat(6, 1fr); /* 6 colonne invece di 4 */
-    grid-auto-rows: 65px;                  /* Altezza ridotta per tasti più piccoli */
-    gap: 6px; 
-    padding: 10px; 
-    overflow-y: auto; 
-    align-content: start;
-}
-
-.prodotto { 
-    border: none; 
-    border-radius: 4px; 
-    font-weight: bold; 
-    cursor: grab; /* Indica che l'elemento è trascinabile */
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    align-items: center; 
-    padding: 2px; 
-    text-align: center; 
-    color: white; 
-    font-size: 0.75rem; /* Testo leggermente più piccolo */
-    line-height: 0.9rem;
-}
-
-.prodotto:active { cursor: grabbing; }
-.prodotto small { font-size: 0.65rem; opacity: 0.9; }
-        
-        /* SCHERMATA TAVOLI */
+        .area-prodotti { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 65px; gap: 6px; padding: 10px; overflow-y: auto; align-content: start; }
+        .prodotto { border: none; border-radius: 4px; font-weight: bold; cursor: grab; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2px; text-align: center; color: white; font-size: 0.75rem; line-height: 0.9rem; }
+        .prodotto:active { cursor: grabbing; }
+        .prodotto small { font-size: 0.65rem; opacity: 0.9; }
         #schermata-tavoli { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #2c3e50; display: none; flex-direction: column; padding: 20px; z-index: 20; box-sizing: border-box; overflow-y: auto; }
         .sezione-titolo { background: #1a252f; padding: 10px; margin: 15px 0 5px 0; border-radius: 4px; font-weight: bold; }
         .griglia-tavoli { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         .btn-tavolo { height: 80px; border: none; border-radius: 5px; background: #27ae60; color: white; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .btn-tavolo.occupato { background: #c0392b !important; border: 2px solid white; }
         .btn-tavolo.camera-style { background: #8e44ad; }
-
-        /* AREA LATERALE ORDINE */
         .area-laterale { flex: 0.8; background-color: #ecf0f1; color: #333; padding: 15px; display: flex; flex-direction: column; }
         #lista-ordine { flex: 1; overflow-y: auto; margin-bottom: 10px; }
         .riga-item { display: flex; justify-content: space-between; padding: 12px 8px; border-bottom: 1px dashed #ccc; cursor: pointer; }
         .riga-item.selezionata { background-color: #3498db !important; color: white; border-radius: 5px; }
-
-        /* TASTIERINO */
         .display-tastierino { background: #111; color: #2ecc71; padding: 10px; text-align: right; font-family: monospace; font-size: 1.5rem; border-top: 2px solid #444; min-height: 30px; }
         .tastierino-container { display: grid; grid-template-columns: 1.2fr 2fr 1.5fr; gap: 8px; padding: 10px; background-color: #1a252f; }
         .btn-pos { height: 50px; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; background-color: #34495e; }
         .blue { background-color: #2980b9; } .orange { background-color: #f39c12; } .red { background-color: #c0392b; } .num { background-color: #ecf0f1; color: #2c3e50; }
         .green { background-color: #27ae60; } .teal { background-color: #16a085; }
-
-        .prodotto { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px; text-align: center; color: white; }
     </style>
 </head>
 <body>
 
     <nav class="menu-categorie">
-    <button onclick="mostraCategoria('bevande')">Bevande</button> 
-    <button onclick="mostraCategoria('Lista vini')">lista vini</button>
-    <button onclick="mostraCategoria('antipasti')">Antipasti</button>
-    <button onclick="mostraCategoria('primi')">Primi</button>
-    <button onclick="mostraCategoria('secondi')">Secondi</button>
-    <button onclick="mostraCategoria('dessert')">Dessert</button>
-    <button onclick="mostraCategoria('caffe')">Caffè</button>
-    <button onclick="mostraCategoria('amari')">Amari</button>
-    <button onclick="mostraCategoria('camere')">Camere</button>
-</nav>
+        <button onclick="mostraCategoria('bevande')">Bevande</button> 
+        <button onclick="mostraCategoria('Lista vini')">lista vini</button>
+        <button onclick="mostraCategoria('antipasti')">Antipasti</button>
+        <button onclick="mostraCategoria('primi')">Primi</button>
+        <button onclick="mostraCategoria('secondi')">Secondi</button>
+        <button onclick="mostraCategoria('dessert')">Dessert</button>
+        <button onclick="mostraCategoria('caffe')">Caffè</button>
+        <button onclick="mostraCategoria('amari')">Amari</button>
+        <button onclick="mostraCategoria('camere')">Camere</button>
+    </nav>
 
     <div class="main-container">
         <div class="area-sinistra">
@@ -144,8 +107,8 @@
             </div>
         </div>
     </div>
+
 <script src="prodotti.js"></script>
- 
 <script>
     // --- COSTANTI E STATO ---
     const LARGHEZZA_RIGA = 31;
@@ -164,81 +127,98 @@
     let prodottiExtra = JSON.parse(localStorage.getItem('prodotti_extra')) || [];
 
     function salvaSuDisco() { 
-    localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
-    localStorage.setItem('pos_data', JSON.stringify(ordiniArchiviati));
-    localStorage.setItem('archivioProforma', JSON.stringify(archivioProforma));
-    localStorage.setItem('contatoreProforma', contatoreProforma);
-}
-function strumentiRecupero() {
-    // 1. Controlliamo se c'è un numero nel buffer (il display dei tasti)
-    if (buffer !== "" && !buffer.includes('x')) {
-        const numScelto = parseInt(buffer);
-        const idx = archivioProforma.findIndex(p => p.numero === numScelto);
-
-        if (idx !== -1) {
-            // Se troviamo il proforma, lo carichiamo in modifica
-            const p = archivioProforma[idx];
-            
-            // Portiamo gli articoli nel carrello
-            articoliInCorso = [...p.articoli];
-            document.getElementById('tavolo-attuale').innerText = p.tavolo;
-            
-            // Lo rimuoviamo dall'archivio (perché verrà ri-emesso con lo stesso o nuovo numero)
-            archivioProforma.splice(idx, 1);
-            
-            // Reset interfaccia
-            salvaSuDisco();
-            renderingOrdine();
-            cancellaBuffer();
-            
-            // Se la schermata tavoli è aperta, la chiudiamo
-            chiudiTavoli();
-            
-            alert(`Proforma N.${numScelto} caricato in modifica.`);
-        } else {
-            alert(`Errore: Proforma N.${numScelto} non trovato in archivio.`);
-            cancellaBuffer();
-        }
-        return; // Esci dalla funzione
+        localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
+        localStorage.setItem('pos_data', JSON.stringify(ordiniArchiviati));
+        localStorage.setItem('archivioProforma', JSON.stringify(archivioProforma));
+        localStorage.setItem('contatoreProforma', contatoreProforma);
     }
 
-    // 2. Se il buffer è VUOTO, mostra il menu strumenti classico (Backup, etc.)
-    const scelta = prompt(
-        "MENU STRUMENTI (Digita un numero prima per modificare un proforma):\n" +
-        "1. Ristampa ultimo Proforma\n" +
-        "2. Esporta Backup Giornata\n" +
-        "3. Importa Backup\n" +
-        "4. Reset totale sistema"
-    );
-
-    if (scelta === "1") {
-        if (archivioProforma.length > 0) stampaFinestra(archivioProforma[archivioProforma.length - 1]);
-    } else if (scelta === "2") {
-        const data = { pExtra: prodottiExtra, arch: ordiniArchiviati, prof: archivioProforma, cont: contatoreProforma };
-        const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `backup_${new Date().toLocaleDateString()}.json`;
-        a.click();
-    } else if (scelta === "3") {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.onchange = e => {
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const d = JSON.parse(ev.target.result);
-                prodottiExtra = d.pExtra || [];
-                ordiniArchiviati = d.arch || [];
-                archivioProforma = d.prof || [];
-                contatoreProforma = d.cont || 1;
-                salvaSuDisco(); location.reload();
-            };
-            reader.readAsText(e.target.files[0]);
-        };
-        input.click();
+    // --- FUNZIONE DI INVIO A RAW BT ---
+    function inviaARawBT(testo) {
+        const base64 = btoa(unescape(encodeURIComponent(testo)));
+        window.location.href = "rawbt:base64," + base64;
     }
-}
-    // --- FUNZIONI CORE ---
+
+    // --- FUNZIONI DI STAMPA (AGGIORNATE PER TABLET) ---
+    function stampaFinestra(proforma) {
+        let testo = "\n" + MARGINE_STAMPA + "*** PROFORMA ***\n";
+        testo += MARGINE_STAMPA + "N. " + proforma.numero + " - " + proforma.tavolo + "\n";
+        testo += MARGINE_STAMPA + new Date().toLocaleDateString() + " " + proforma.ora + "\n";
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+        
+        proforma.articoli.forEach(item => {
+            const q = `${item.qta}x `; 
+            const p = `EUR${(item.qta * item.prezzo).toFixed(2).padStart(7, " ")}`;
+            const n = item.nome.substring(0, LARGHEZZA_RIGA - q.length - p.length - 1);
+            const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
+            testo += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
+        });
+        
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+        testo += MARGINE_STAMPA + "TOTALE: EUR " + proforma.totale.toFixed(2).padStart(8) + "\n\n";
+        testo += MARGINE_STAMPA + "Doc. non fiscale\n\n\n\n\n";
+        
+        inviaARawBT(testo);
+    }
+
+    function stampaCucina(nomeTavolo, articoli) {
+        let testo = "\n" + MARGINE_STAMPA + "--- ORDINE CUCINA ---\n";
+        testo += MARGINE_STAMPA + "TAVOLO: " + nomeTavolo + "\n";
+        testo += MARGINE_STAMPA + "ORA: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + "\n";
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+        
+        articoli.forEach(item => {
+            testo += MARGINE_STAMPA + item.qta + " x " + item.nome.toUpperCase() + "\n";
+        });
+
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n\n\n\n\n";
+        
+        inviaARawBT(testo);
+    }
+
+    function chiusura() {
+        if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
+        if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
+
+        let c = { RIST: 0, CAME: 0, TASS: 0 };
+        let d = { RIST: "", CAME: "", TASS: "" };
+
+        archivioProforma.forEach(p => {
+            if(!p.articoli) return;
+            p.articoli.forEach(art => {
+                let imp = (art.prezzo || 0) * (art.qta || 0);
+                let rep = art.reparto || "RIST";
+                if (!c.hasOwnProperty(rep)) rep = "RIST";
+                c[rep] += imp;
+                d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+            });
+        });
+
+        let testo = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** RISTORANTE/BAR **\n";
+        testo += (d.RIST || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE RIST: EUR " + c.RIST.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** CAMERE **\n";
+        testo += (d.CAME || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE CAME: EUR " + c.CAME.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** TASSA SOGGIORNO **\n";
+        testo += (d.TASS || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE TASS: EUR " + c.TASS.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + (c.RIST+c.CAME+c.TASS).toFixed(2) + "\n\n\n\n\n";
+
+        inviaARawBT(testo);
+        
+        archivioProforma = []; 
+        contatoreProforma = 1; 
+        salvaSuDisco(); 
+        location.reload();
+    }
+
+    // --- LOGICA INTERFACCIA (Invariata) ---
     function digita(v) { buffer += v; aggiornaDisplay(); }
     function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
     function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
@@ -278,109 +258,31 @@ function strumentiRecupero() {
         document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
     }
 
-    // --- GESTIONE LISTINO ---
-    function eliminaProdotto(index) {
-        if (confirm("Vuoi eliminare questo prodotto?")) {
-            prodottiExtra.splice(index, 1);
-            salvaSuDisco();
-            mostraCategoria(catAttuale);
-        }
+    function mostraCategoria(cat) {
+        catAttuale = cat.toLowerCase().trim();
+        const griglia = document.getElementById('griglia-prodotti'); 
+        if(!griglia) return;
+        griglia.innerHTML = '';
+        const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
+        filtrati.forEach((p) => {
+            const indexOriginale = prodottiExtra.indexOf(p);
+            const btn = document.createElement('button'); 
+            btn.className = 'prodotto';
+            btn.style.backgroundColor = getColoreCSS(p.colore);
+            btn.setAttribute('draggable', true);
+            btn.onclick = () => aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
+            btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
+            griglia.appendChild(btn);
+        });
     }
-
-    function modificaProdotto(index) {
-        const p = prodottiExtra[index];
-        const nuovoNome = prompt("Nome:", p.nome);
-        if (!nuovoNome) return;
-        const nuovoPrezzo = parseFloat(prompt("Prezzo:", p.prezzo).replace(',', '.'));
-        if (isNaN(nuovoPrezzo)) return alert("Errore prezzo");
-        prodottiExtra[index].nome = nuovoNome;
-        prodottiExtra[index].prezzo = nuovoPrezzo;
-        salvaSuDisco();
-        mostraCategoria(catAttuale);
-    }
-
-    // --- LOGICA TRASCINAMENTO ---
-let indexTrascinato = null;
-
-function mostraCategoria(cat) {
-    catAttuale = cat.toLowerCase().trim();
-    const griglia = document.getElementById('griglia-prodotti'); 
-    if(!griglia) return;
-    griglia.innerHTML = '';
-
-    // Filtriamo i prodotti della categoria attuale
-    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
-
-    filtrati.forEach((p) => {
-        const indexOriginale = prodottiExtra.indexOf(p);
-        const btn = document.createElement('button'); 
-        btn.className = 'prodotto';
-        btn.style.backgroundColor = getColoreCSS(p.colore);
-        
-        // Rendiamo il tasto trascinabile
-        btn.setAttribute('draggable', true);
-
-        // --- EVENTI DRAG & DROP ---
-        btn.ondragstart = (e) => {
-            indexTrascinato = indexOriginale;
-            e.target.style.opacity = "0.4";
-        };
-
-        btn.ondragend = (e) => {
-            e.target.style.opacity = "1";
-            indexTrascinato = null;
-        };
-
-        btn.ondragover = (e) => e.preventDefault(); // Permette il drop
-
-        btn.ondrop = (e) => {
-            e.preventDefault();
-            if (indexTrascinato !== null && indexTrascinato !== indexOriginale) {
-                // Spostiamo l'elemento nell'array principale
-                const elemento = prodottiExtra.splice(indexTrascinato, 1)[0];
-                prodottiExtra.splice(indexOriginale, 0, elemento);
-                
-                salvaSuDisco();
-                mostraCategoria(catAttuale); // Ricarica la griglia ordinata
-            }
-        };
-
-        // --- ALTRE FUNZIONI ---
-        btn.onclick = () => aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-        
-        btn.oncontextmenu = (e) => {
-            e.preventDefault();
-            if(confirm("Modificare " + p.nome + "?")) modificaProdotto(indexOriginale);
-            else eliminaProdotto(indexOriginale);
-        };
-
-        btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
-        griglia.appendChild(btn);
-    });
-}
 
     function getColoreCSS(c) {
-    const colori = { 
-        'azzurro': '#3498db', 
-        'verde': '#27ae60', 
-        'viola': '#9b59b6', 
-        'arancione': '#e67e22', 
-        'rosso': '#e74c3c', 
-        'giallo': '#f1c40f',
-        'viola-scuro': '#8e44ad' 
-    };
-    return colori[c] || '#3498db'; // Se non trova il colore, usa l'azzurro di default
-}
-
-    // --- TAVOLI ---
-    function apriTavoli(modo) {
-        modalitaTavoli = modo;
-        chiudiDettaglioTavolo();
-        document.getElementById('schermata-tavoli').style.display = 'flex';
-        aggiornaMappa();
+        const colori = { 'azzurro': '#3498db', 'verde': '#27ae60', 'viola': '#9b59b6', 'arancione': '#e67e22', 'rosso': '#e74c3c', 'giallo': '#f1c40f' };
+        return colori[c] || '#3498db';
     }
-    function chiudiTavoli() { document.getElementById('schermata-tavoli').style.display = 'none'; }
 
+    function apriTavoli(modo) { modalitaTavoli = modo; chiudiDettaglioTavolo(); document.getElementById('schermata-tavoli').style.display = 'flex'; aggiornaMappa(); }
+    function chiudiTavoli() { document.getElementById('schermata-tavoli').style.display = 'none'; }
     function aggiornaMappa() {
         const sala = document.getElementById('tavoli-sala'), terr = document.getElementById('tavoli-terrazza'), cam = document.getElementById('tavoli-camere');
         sala.innerHTML = ""; terr.innerHTML = ""; cam.innerHTML = "";
@@ -399,33 +301,14 @@ function mostraCategoria(cat) {
         for(let i=1; i<=7; i++) creaBtn('Cam.', i, cam, 'camera-style');
     }
 
-   function selezionaTavolo(nome) {
-    // Se ci sono articoli in corso, li "appoggiamo" sul tavolo scelto
-    if (articoliInCorso.length > 0) {
-        const nuovoOrdine = { 
-            id: Date.now(), 
-            tavolo: nome, 
-            ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            articoli: [...articoliInCorso], 
-            totale: totaleCorrente 
-        };
-
-        // 1. Salviamo l'ordine sul tavolo
-        ordiniArchiviati.push(nuovoOrdine);
-        
-        // 2. STAMPA AUTOMATICA PER LA CUCINA
-        stampaCucina(nome, articoliInCorso);
-        
-        // 3. Pulizia e chiusura
-        salvaSuDisco();
-        svuotaOrdine();
-        chiudiTavoli();
-        alert("Ordine inviato a " + nome + " e stampato in cucina.");
-    } else { 
-        // Se il carrello è vuoto, mostriamo solo cosa c'è già sul tavolo
-        mostraDettaglio(nome); 
+    function selezionaTavolo(nome) {
+        if (articoliInCorso.length > 0) {
+            const nuovoOrdine = { id: Date.now(), tavolo: nome, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), articoli: [...articoliInCorso], totale: totaleCorrente };
+            ordiniArchiviati.push(nuovoOrdine);
+            stampaCucina(nome, articoliInCorso);
+            salvaSuDisco(); svuotaOrdine(); chiudiTavoli();
+        } else { mostraDettaglio(nome); }
     }
-}
 
     function mostraDettaglio(nome) {
         document.getElementById('area-mappa').style.display = 'none';
@@ -434,13 +317,6 @@ function mostraCategoria(cat) {
         const corpo = document.getElementById('corpo-scontrini');
         corpo.innerHTML = "";
         const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
-        if (ordini.length > 1) {
-            const btnU = document.createElement('button');
-            btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
-            btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer;";
-            btnU.onclick = () => emettiProformaUnificato(nome);
-            corpo.appendChild(btnU);
-        }
         ordini.forEach(o => {
             const div = document.createElement('div');
             div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333";
@@ -454,13 +330,7 @@ function mostraCategoria(cat) {
     }
 
     function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
-
-    // --- FUNZIONI DI STAMPA (CORRETTE) ---
-function inviaARawBT(testo) {
-        // Converte il testo in Base64 per Raw BT
-        const base64 = btoa(unescape(encodeURIComponent(testo)));
-        window.location.href = "rawbt:base64," + base64;
-    }
+    function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
 
     function emettiProforma() {
         if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
@@ -483,64 +353,13 @@ function inviaARawBT(testo) {
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
 
-    function emettiProformaUnificato(nomeTavolo) {
-        const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
-        let tuttiArt = []; let tot = 0;
-        ordini.forEach(o => { tuttiArt = tuttiArt.concat(o.articoli); tot += o.totale; });
-        const dp = { numero: contatoreProforma, tavolo: nomeTavolo, articoli: tuttiArt, totale: tot, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
-        stampaFinestra(dp);
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
-        salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
+    function aggiungiNuovoArticoloListino() {
+        const nome = prompt("Nome Prodotto:"); if(!nome) return;
+        const prezzo = parseFloat(prompt("Prezzo:", "0.00").replace(',', '.'));
+        let cat = prompt("Categoria:", catAttuale).toLowerCase().trim();
+        prodottiExtra.push({ nome: nome, prezzo: prezzo, cat: cat, reparto: 'RIST', colore: 'azzurro' });
+        salvaSuDisco(); mostraCategoria(cat);
     }
-
-    function stampaFinestra(proforma) {
-        let testo = "\n" + MARGINE_STAMPA + "*** PROFORMA ***\n";
-        testo += MARGINE_STAMPA + "N. " + proforma.numero + " - " + proforma.tavolo + "\n";
-        testo += MARGINE_STAMPA + new Date().toLocaleDateString() + " " + proforma.ora + "\n";
-        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
-        
-        proforma.articoli.forEach(item => {
-            const q = `${item.qta}x `; 
-            const p = `EUR${(item.qta * item.prezzo).toFixed(2).padStart(7, " ")}`;
-            const n = item.nome.substring(0, LARGHEZZA_RIGA - q.length - p.length - 1);
-            const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
-            testo += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
-        });
-        
-        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
-        testo += MARGINE_STAMPA + "TOTALE: EUR " + proforma.totale.toFixed(2).padStart(8) + "\n\n";
-        testo += MARGINE_STAMPA + "Doc. non fiscale\n\n\n\n\n";
-        
-        inviaARawBT(testo);
-    }
-
-    // --- ALTRE FUNZIONI ---
-function aggiungiNuovoArticoloListino() {
-    const nome = prompt("Nome Dessert:"); 
-    if(!nome) return;
-    
-    const prezzoInput = prompt("Prezzo:", "0.00");
-    if(prezzoInput === null) return;
-    const prezzo = parseFloat(prezzoInput.replace(',', '.'));
-
-    // Suggerisce la categoria in cui ti trovi (es. dessert)
-    let cat = prompt("Categoria (bevande, vini, dessert...):", catAttuale); 
-    if(!cat) return;
-    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
-
-    prodottiExtra.push({ 
-        nome: nome, 
-        prezzo: prezzo, 
-        cat: cat, 
-        reparto: 'RIST', 
-        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
-    });
-
-    salvaSuDisco(); 
-    mostraCategoria(cat); 
-}
 
     function richiama(id) {
         const idx = ordiniArchiviati.findIndex(o => o.id === id);
@@ -548,8 +367,6 @@ function aggiungiNuovoArticoloListino() {
         document.getElementById('tavolo-attuale').innerText = ordiniArchiviati[idx].tavolo;
         ordiniArchiviati.splice(idx, 1);
         salvaSuDisco(); renderingOrdine(); chiudiTavoli();
-const lista = document.getElementById('lista-ordine');
-lista.scrollTop = lista.scrollHeight;
     }
 
     function modificaQuantita(n) {
@@ -560,92 +377,26 @@ lista.scrollTop = lista.scrollHeight;
         renderingOrdine();
     }
 
-    function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
-
-   function chiusura() {
-        if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-        if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
-
-        let c = { RIST: 0, CAME: 0, TASS: 0 };
-        let d = { RIST: "", CAME: "", TASS: "" };
-
-        archivioProforma.forEach(p => {
-            if(!p.articoli) return;
-            p.articoli.forEach(art => {
-                let imp = (art.prezzo || 0) * (art.qta || 0);
-                let rep = art.reparto || "RIST";
-                if (!c.hasOwnProperty(rep)) rep = "RIST";
-                c[rep] += imp;
-                d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
-            });
-        });
-
-        let testo = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** RISTORANTE/BAR **\n";
-        testo += (d.RIST || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE RIST: EUR " + c.RIST.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** CAMERE **\n";
-        testo += (d.CAME || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE CAME: EUR " + c.CAME.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** TASSA SOGGIORNO **\n";
-        testo += (d.TASS || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE TASS: EUR " + c.TASS.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + (c.RIST+c.CAME+c.TASS).toFixed(2) + "\n\n\n\n\n";
-
-        inviaARawBT(testo);
-        
-        // Pulizia finale e reset
-        archivioProforma = []; 
-        contatoreProforma = 1; 
-        salvaSuDisco(); 
-        location.reload();
-    }
-function stampaCucina(nomeTavolo, articoli) {
-        let testo = "\n" + MARGINE_STAMPA + "--- ORDINE CUCINA ---\n";
-        testo += MARGINE_STAMPA + "TAVOLO: " + nomeTavolo + "\n";
-        testo += MARGINE_STAMPA + "ORA: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + "\n";
-        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
-        
-        articoli.forEach(item => {
-            testo += MARGINE_STAMPA + item.qta + " x " + item.nome.toUpperCase() + "\n";
-        });
-
-        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n\n\n\n\n";
-        
-        inviaARawBT(testo);
+    function strumentiRecupero() {
+        if (buffer !== "" && !buffer.includes('x')) {
+            const numScelto = parseInt(buffer);
+            const idx = archivioProforma.findIndex(p => p.numero === numScelto);
+            if (idx !== -1) {
+                const p = archivioProforma[idx];
+                articoliInCorso = [...p.articoli];
+                document.getElementById('tavolo-attuale').innerText = p.tavolo;
+                archivioProforma.splice(idx, 1);
+                salvaSuDisco(); renderingOrdine(); cancellaBuffer(); chiudiTavoli();
+            }
+            return;
+        }
     }
 
-    let html = `<html><body style="font-family:monospace;white-space:pre">
-${MARGINE_STAMPA}--- ORDINE CUCINA ---
-${MARGINE_STAMPA}TAVOLO: ${nomeTavolo}
-${MARGINE_STAMPA}ORA: ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}
-${corpoCucina}
-${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}
-\n\n\n\n\n
-<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);};<\/script></body></html>`;
-    
-    win.document.write(html);
-    win.document.close();
-}
-window.onload = () => {
-    // Carichiamo i dati dal disco PRIMA di ogni altra cosa
-    const datiSalvati = localStorage.getItem('prodotti_extra');
-    if (datiSalvati) {
-        prodottiExtra = JSON.parse(datiSalvati);
-    } else if (typeof prodotti !== 'undefined') {
-        // Solo se il disco è vuoto carichiamo dal file prodotti.js
-        prodottiExtra = [...prodotti];
-        salvaSuDisco();
-    }
-    
-    mostraCategoria('bevande'); 
-};
-
+    window.onload = () => {
+        const datiSalvati = localStorage.getItem('prodotti_extra');
+        if (datiSalvati) prodottiExtra = JSON.parse(datiSalvati);
+        mostraCategoria('bevande'); 
+    };
 </script>
-    </body>
+</body>
 </html>
