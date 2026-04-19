@@ -296,34 +296,42 @@ function inviaARawBT(testo) {
     window.location.href = "rawbt:base64," + base64testo;
 }
 
-function stampaFinestra(proforma) {
-    let testo = "";
-    testo += centraTesto("PIZZERIA DA CARLO", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+function stampaFinestra(proforma) { 
+    const LARGHEZZA_RIGA = 42; 
+    let corpoS = "";
+
+    if (!proforma.articoli || proforma.articoli.length === 0) {
+        alert("Errore: Nessun articolo da stampare");
+        return;
+    }
 
     proforma.articoli.forEach(item => {
         const q = `${item.qta}x `; 
         const p = `${(item.qta * item.prezzo).toFixed(2)}`;
-        const spazioDisponibile = LARGHEZZA_RIGA_STAMPA - q.length - p.length - 1;
+        const spazioDisponibile = LARGHEZZA_RIGA - q.length - p.length - 1;
         const n = item.nome.substring(0, spazioDisponibile).toUpperCase();
-        const sp = Math.max(1, LARGHEZZA_RIGA_STAMPA - (q.length + n.length + p.length));
-        testo += q + n + " ".repeat(sp) + p + "\n";
+        const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
+        corpoS += q + n + " ".repeat(sp) + p + "\n";
     });
 
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    const rigaTot = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
-    testo += " ".repeat(LARGHEZZA_RIGA_STAMPA - rigaTot.length) + rigaTot + "\n\n";
-    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA_STAMPA) + "\n\n\n\n\n";
+    let testo = "";
+    testo += centraTesto("*** PROFORMA ***", LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto(`N. ${proforma.numero} - ${proforma.tavolo}`, LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA_RIGA) + "\n";
+    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
+    testo += corpoS;
+    testo += "-".repeat(LARGHEZZA_RIGA) + "\n";
+    
+    const rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
+    testo += " ".repeat(LARGHEZZA_RIGA - rigaTotale.length) + rigaTotale + "\n\n";
+    
+    testo += centraTesto("DOC. NON FISCALE", LARGHEZZA_RIGA) + "\n";
+    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA_RIGA) + "\n";
+    testo += "\n\n\n\n\n"; 
 
-    inviaARawBT(testo);
-}
-
-function stampaCucina(nomeTavolo, articoli) {
+    const base64testo = btoa(unescape(encodeURIComponent(testo)));
+    window.location.href = "rawbt:base64," + base64testo;
+}function stampaCucina(nomeTavolo, articoli) {
     let testo = "";
     testo += centraTesto("--- ORDINE CUCINA ---", LARGHEZZA_RIGA_STAMPA) + "\n";
     testo += centraTesto(`TAVOLO: ${nomeTavolo}`, LARGHEZZA_RIGA_STAMPA) + "\n";
@@ -387,36 +395,44 @@ function emettiProformaUnificato(nomeTavolo) {
 
 // --- CHIUSURA GIORNALIERA ---
 function chiusura() {
-    if (archivioProforma.length === 0) return alert("Nessun dato!");
-    if (!confirm("Effettuare la CHIUSURA?")) return;
+    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
+    if (!confirm("Effettuare la CHIUSURA giornaliera?")) return;
 
+    const LARG_CHIUSURA = 42;
     let c = { RIST: 0, CAME: 0, TASS: 0 };
-    let testo = centraTesto("CHIUSURA GIORNALIERA", LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += centraTesto(new Date().toLocaleDateString(), LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
+    let dettagli = "";
 
     archivioProforma.forEach(p => {
+        if(!p.articoli) return;
         p.articoli.forEach(art => {
-            let imp = art.prezzo * art.qta;
+            let imp = (art.prezzo || 0) * (art.qta || 0);
             let rep = art.reparto || "RIST";
             if (c[rep] !== undefined) c[rep] += imp;
-            testo += `N.${p.numero} ${p.tavolo.toString().padEnd(10)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+            dettagli += `N.${p.numero} ${p.tavolo.toString().padEnd(10)} EUR ${imp.toFixed(2).padStart(8)}\n`;
         });
     });
 
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += `TOTALE RIST: EUR ${c.RIST.toFixed(2).padStart(10)}\n`;
-    testo += `TOTALE CAME: EUR ${c.CAME.toFixed(2).padStart(10)}\n`;
-    testo += `TOTALE TASS: EUR ${c.TASS.toFixed(2).padStart(10)}\n`;
-    testo += "-".repeat(LARGHEZZA_RIGA_STAMPA) + "\n";
-    testo += `GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2).padStart(10)}\n\n\n\n\n`;
+    let testoZ = "";
+    testoZ += centraTesto("CHIUSURA GIORNALIERA", LARG_CHIUSURA) + "\n";
+    testoZ += centraTesto(new Date().toLocaleDateString(), LARG_CHIUSURA) + "\n";
+    testoZ += "-".repeat(LARG_CHIUSURA) + "\n";
+    testoZ += dettagli;
+    testoZ += "-".repeat(LARG_CHIUSURA) + "\n";
+    testoZ += `TOT. RISTORANTE: EUR ${c.RIST.toFixed(2).padStart(10)}\n`;
+    testoZ += `TOT. CAMERE:     EUR ${c.CAME.toFixed(2).padStart(10)}\n`;
+    testoZ += `TOT. TASSA SOGG: EUR ${c.TASS.toFixed(2).padStart(10)}\n`;
+    testoZ += "-".repeat(LARG_CHIUSURA) + "\n";
+    testoZ += `TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2).padStart(10)}\n`;
+    testoZ += "\n\n\n\n\n";
 
-    inviaARawBT(testo);
+    const base64Z = btoa(unescape(encodeURIComponent(testoZ)));
+    window.location.href = "rawbt:base64," + base64Z;
     
-    archivioProforma = []; contatoreProforma = 1; salvaSuDisco();
+    archivioProforma = []; 
+    contatoreProforma = 1; 
+    salvaSuDisco(); 
     setTimeout(() => location.reload(), 1000);
 }
-
 // --- ALTRE FUNZIONI ---
 function richiama(id) {
     const idx = ordiniArchiviati.findIndex(o => o.id === id);
