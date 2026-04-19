@@ -465,16 +465,24 @@ function mostraCategoria(cat) {
         svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
     }
 
-    function stampaSingoloDaTavolo(id) {
+  function stampaSingoloDaTavolo(id) {
         const idx = ordiniArchiviati.findIndex(o => o.id === id);
         if (idx === -1) return;
+        
         const o = ordiniArchiviati[idx];
         const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
-        stampaFinestra(dp);
+
+        // --- MODIFICA QUI: Sostituiamo stampaFinestra con la nuova funzione RawBT ---
+        stampaProforma(dp.tavolo, dp.articoli, dp.totale);
+        // --------------------------------------------------------------------------
+
         archivioProforma.push(dp);
         contatoreProforma++;
         ordiniArchiviati.splice(idx, 1);
-        salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
+        
+        salvaSuDisco(); 
+        chiudiTavoli(); 
+        aggiornaMappa();
     }
 
     function emettiProformaUnificato(nomeTavolo) {
@@ -489,21 +497,43 @@ function mostraCategoria(cat) {
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
 
-    function stampaFinestra(proforma) {
-        const win = window.open('', '', 'height=700,width=500');
-        let corpoS = "";
-        proforma.articoli.forEach(item => {
-            const q = `${item.qta}x `; 
-            const p = `EUR${(item.qta * item.prezzo).toFixed(2).padStart(7, " ")}`;
-            const n = item.nome.substring(0, LARGHEZZA_RIGA - q.length - p.length - 1);
-            const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
-            corpoS += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
-        });
-        let html = `<html><body style="font-family:monospace;white-space:pre">
-${MARGINE_STAMPA}*** PROFORMA ***\n${MARGINE_STAMPA}N. ${proforma.numero} - ${proforma.tavolo}\n${MARGINE_STAMPA}${new Date().toLocaleDateString()} ${proforma.ora}\n${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}\n${corpoS}\n${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}\n${MARGINE_STAMPA}TOTALE: EUR ${proforma.totale.toFixed(2).padStart(8)}\n\n${MARGINE_STAMPA}Doc. non fiscale\n\n\n\n\n
-<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);};<\/script></body></html>`;
-        win.document.write(html); win.document.close();
-    }
+ function stampaProforma(proforma) {
+    const LARGHEZZA = 42; 
+    let testo = "";
+
+    // --- INTESTAZIONE ---
+    testo += centraTesto("il Camino", LARGHEZZA) + "\n";
+    testo += centraTesto("--------------------------------", LARGHEZZA) + "\n";
+    testo += centraTesto("*** PROFORMA ***", LARGHEZZA) + "\n";
+    testo += centraTesto(`N. ${proforma.numero} - TAVOLO: ${proforma.tavolo}`, LARGHEZZA) + "\n";
+    testo += centraTesto(`${new Date().toLocaleDateString()} ${proforma.ora}`, LARGHEZZA) + "\n";
+    testo += "--------------------------------\n\n";
+
+    // --- CORPO ---
+    proforma.articoli.forEach(item => {
+        let qtaNome = `${item.qta}x ${item.nome.toUpperCase()}`;
+        let prezzo = (item.qta * item.prezzo).toFixed(2);
+        
+        let spaziSostitutivi = LARGHEZZA - qtaNome.length - prezzo.length;
+        if (spaziSostitutivi < 1) spaziSostitutivi = 1;
+
+        testo += qtaNome + " ".repeat(spaziSostitutivi) + prezzo + "\n";
+    });
+
+    // --- TOTALE ---
+    testo += "--------------------------------\n";
+    let rigaTotale = `TOTALE: EUR ${proforma.totale.toFixed(2)}`;
+    testo += " ".repeat(LARGHEZZA - rigaTotale.length) + rigaTotale + "\n";
+    testo += "--------------------------------\n\n";
+
+    testo += centraTesto("DOCUMENTO NON FISCALE", LARGHEZZA) + "\n";
+    testo += centraTesto("GRAZIE E ARRIVEDERCI", LARGHEZZA) + "\n";
+    testo += "\n\n\n\n\n"; 
+
+    // --- INVIO A RAWBT ---
+    const base64testo = btoa(unescape(encodeURIComponent(testo)));
+    window.location.href = "rawbt:base64," + base64testo;
+}   
 
     // --- ALTRE FUNZIONI ---
 function aggiungiNuovoArticoloListino() {
