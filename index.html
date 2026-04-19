@@ -465,17 +465,32 @@ function mostraCategoria(cat) {
         svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
     }
 
-    function stampaSingoloDaTavolo(id) {
-        const idx = ordiniArchiviati.findIndex(o => o.id === id);
-        if (idx === -1) return;
-        const o = ordiniArchiviati[idx];
-        const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
-        stampaFinestra(dp);
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        ordiniArchiviati.splice(idx, 1);
-        salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
-    }
+function stampaSingoloDaTavolo(id) {
+    const idx = ordiniArchiviati.findIndex(o => o.id === id);
+    if (idx === -1) return;
+    
+    const o = ordiniArchiviati[idx];
+    
+    // Creiamo l'oggetto per la stampa assicurandoci che i valori siano numeri
+    const dp = { 
+        numero: contatoreProforma || 0, 
+        tavolo: o.tavolo || "Tavolo", 
+        articoli: o.articoli || [], 
+        totale: parseFloat(o.totale) || 0, 
+        ora: o.ora || new Date().toLocaleTimeString() 
+    };
+
+    // Lanciamo la stampa
+    stampaFinestra(dp);
+
+    // Procediamo con l'archiviazione
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    ordiniArchiviati.splice(idx, 1);
+    salvaSuDisco(); 
+    chiudiTavoli(); 
+    aggiornaMappa();
+}
 
     function emettiProformaUnificato(nomeTavolo) {
         const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
