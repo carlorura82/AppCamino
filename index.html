@@ -456,6 +456,12 @@ function mostraCategoria(cat) {
     function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
 
     // --- FUNZIONI DI STAMPA (CORRETTE) ---
+function inviaARawBT(testo) {
+        // Converte il testo in Base64 per Raw BT
+        const base64 = btoa(unescape(encodeURIComponent(testo)));
+        window.location.href = "rawbt:base64," + base64;
+    }
+
     function emettiProforma() {
         if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
         const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
@@ -490,19 +496,24 @@ function mostraCategoria(cat) {
     }
 
     function stampaFinestra(proforma) {
-        const win = window.open('', '', 'height=700,width=500');
-        let corpoS = "";
+        let testo = "\n" + MARGINE_STAMPA + "*** PROFORMA ***\n";
+        testo += MARGINE_STAMPA + "N. " + proforma.numero + " - " + proforma.tavolo + "\n";
+        testo += MARGINE_STAMPA + new Date().toLocaleDateString() + " " + proforma.ora + "\n";
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+        
         proforma.articoli.forEach(item => {
             const q = `${item.qta}x `; 
             const p = `EUR${(item.qta * item.prezzo).toFixed(2).padStart(7, " ")}`;
             const n = item.nome.substring(0, LARGHEZZA_RIGA - q.length - p.length - 1);
             const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
-            corpoS += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
+            testo += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
         });
-        let html = `<html><body style="font-family:monospace;white-space:pre">
-${MARGINE_STAMPA}*** PROFORMA ***\n${MARGINE_STAMPA}N. ${proforma.numero} - ${proforma.tavolo}\n${MARGINE_STAMPA}${new Date().toLocaleDateString()} ${proforma.ora}\n${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}\n${corpoS}\n${MARGINE_STAMPA}${"-".repeat(LARGHEZZA_RIGA)}\n${MARGINE_STAMPA}TOTALE: EUR ${proforma.totale.toFixed(2).padStart(8)}\n\n${MARGINE_STAMPA}Doc. non fiscale\n\n\n\n\n
-<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);};<\/script></body></html>`;
-        win.document.write(html); win.document.close();
+        
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+        testo += MARGINE_STAMPA + "TOTALE: EUR " + proforma.totale.toFixed(2).padStart(8) + "\n\n";
+        testo += MARGINE_STAMPA + "Doc. non fiscale\n\n\n\n\n";
+        
+        inviaARawBT(testo);
     }
 
     // --- ALTRE FUNZIONI ---
@@ -552,61 +563,61 @@ lista.scrollTop = lista.scrollHeight;
     function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
 
    function chiusura() {
-    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-    if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
+        if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
+        if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
 
-    // Inizializziamo i totali per reparto
-    let c = { RIST: 0, CAME: 0, TASS: 0 };
-    let d = { RIST: "", CAME: "", TASS: "" };
+        let c = { RIST: 0, CAME: 0, TASS: 0 };
+        let d = { RIST: "", CAME: "", TASS: "" };
 
-    // Elaboriamo ogni proforma salvato durante il giorno
-    archivioProforma.forEach(p => {
-        if(!p.articoli) return;
-        p.articoli.forEach(art => {
-            let imp = (art.prezzo || 0) * (art.qta || 0);
-            let rep = art.reparto || "RIST";
-            
-            // Sicurezza: se il reparto non è tra quelli previsti, lo mette in RIST
-            if (!c.hasOwnProperty(rep)) rep = "RIST";
-            
-            c[rep] += imp;
-            d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+        archivioProforma.forEach(p => {
+            if(!p.articoli) return;
+            p.articoli.forEach(art => {
+                let imp = (art.prezzo || 0) * (art.qta || 0);
+                let rep = art.reparto || "RIST";
+                if (!c.hasOwnProperty(rep)) rep = "RIST";
+                c[rep] += imp;
+                d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+            });
         });
-    });
 
-    const win = window.open('', '', 'height=700,width=450');
-    let html = `<html><head><style>body{font-family:monospace; font-size:10pt;} pre{margin:0;}</style></head><body><pre>
-${MARGINE_STAMPA}CHIUSURA DEL ${new Date().toLocaleDateString()}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}** RISTORANTE/BAR **
-${d.RIST || MARGINE_STAMPA + "(nessuna voce)\n"}${MARGINE_STAMPA}TOTALE RIST: EUR ${c.RIST.toFixed(2).padStart(8)}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}** CAMERE **
-${d.CAME || MARGINE_STAMPA + "(nessuna voce)\n"}${MARGINE_STAMPA}TOTALE CAME: EUR ${c.CAME.toFixed(2).padStart(8)}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}** TASSA SOGGIORNO **
-${d.TASS || MARGINE_STAMPA + "(nessuna voce)\n"}${MARGINE_STAMPA}TOTALE TASS: EUR ${c.TASS.toFixed(2).padStart(8)}
-${MARGINE_STAMPA}------------------------------
-${MARGINE_STAMPA}TOTALE GENERALE: EUR ${(c.RIST+c.CAME+c.TASS).toFixed(2)}
-\n\n\n\n</pre><script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500);};<\/script></body></html>`;
+        let testo = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** RISTORANTE/BAR **\n";
+        testo += (d.RIST || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE RIST: EUR " + c.RIST.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** CAMERE **\n";
+        testo += (d.CAME || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE CAME: EUR " + c.CAME.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** TASSA SOGGIORNO **\n";
+        testo += (d.TASS || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE TASS: EUR " + c.TASS.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + (c.RIST+c.CAME+c.TASS).toFixed(2) + "\n\n\n\n\n";
 
-    win.document.write(html); 
-    win.document.close();
-    
-    // Pulizia finale e reset
-    archivioProforma = []; 
-    contatoreProforma = 1; 
-    salvaSuDisco(); 
-    location.reload();
-}
+        inviaARawBT(testo);
+        
+        // Pulizia finale e reset
+        archivioProforma = []; 
+        contatoreProforma = 1; 
+        salvaSuDisco(); 
+        location.reload();
+    }
 function stampaCucina(nomeTavolo, articoli) {
-    const win = window.open('', '', 'height=600,width=400');
-    let corpoCucina = "";
-    
-    articoli.forEach(item => {
-        // In cucina stampiamo solo Nome e Quantità, molto grande
-        corpoCucina += `${MARGINE_STAMPA}${item.qta} x ${item.nome.toUpperCase()}\n`;
-    });
+        let testo = "\n" + MARGINE_STAMPA + "--- ORDINE CUCINA ---\n";
+        testo += MARGINE_STAMPA + "TAVOLO: " + nomeTavolo + "\n";
+        testo += MARGINE_STAMPA + "ORA: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + "\n";
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+        
+        articoli.forEach(item => {
+            testo += MARGINE_STAMPA + item.qta + " x " + item.nome.toUpperCase() + "\n";
+        });
+
+        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n\n\n\n\n";
+        
+        inviaARawBT(testo);
+    }
 
     let html = `<html><body style="font-family:monospace;white-space:pre">
 ${MARGINE_STAMPA}--- ORDINE CUCINA ---
