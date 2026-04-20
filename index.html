@@ -371,15 +371,7 @@ function mostraCategoria(cat) {
     if(!griglia) return;
     griglia.innerHTML = '';
 
-    // Tasto di chiusura modalità spostamento (opzionale, se vuoi un feedback visivo in griglia)
-    if (modalitaSpostamento) {
-        const btnFine = document.createElement('button');
-        btnFine.className = 'prodotto';
-        btnFine.style.backgroundColor = '#2ecc71';
-        btnFine.innerHTML = '<b>FINITO ✅</b>';
-        btnFine.onclick = disattivaSpostamento;
-        griglia.appendChild(btnFine);
-    }
+
 
     const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
 
