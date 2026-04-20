@@ -1,6 +1,45 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBl-FNVefU0LYoAEfrG0vS5GhXv4QrXY4s",
+    authDomain: "appcamino-sinc.firebaseapp.com",
+    projectId: "appcamino-sinc",
+    storageBucket: "appcamino-sinc.firebasestorage.app",
+    messagingSenderId: "710861756762",
+    appId: "1:710861756762:web:cef19f28c0c40caa683b63",
+    measurementId: "G-3D28WER503"
+  };
+
+  // Inizializza Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // Funzione per caricare i dati dal Cloud all'avvio
+  function caricaArticoliDalCloud() {
+    db.collection("configurazione").doc("listino").onSnapshot((doc) => {
+      if (doc.exists && doc.data().articoli) {
+        // Aggiorna l'array globale dei prodotti
+        prodottiExtra = doc.data().articoli;
+        console.log("Dati sincronizzati dal Cloud!");
+        
+        // Se la funzione mostraCategoria esiste, aggiorna la vista
+        if (typeof mostraCategoria === "function") {
+          mostraCategoria(catAttuale);
+        }
+      } else {
+        console.log("Documento non trovato o vuoto, uso dati locali.");
+      }
+    });
+  }
+
+  // Avviamo la sincronizzazione
+  caricaArticoliDalCloud();
+</script>
     <meta charset="UTF-8">
     <title>POS Ristorante - Custom KUBE II</title>
     <link rel="manifest" href="manifest.json">
@@ -145,12 +184,22 @@
     let archivioProforma = JSON.parse(localStorage.getItem('archivioProforma')) || [];
     let prodottiExtra = JSON.parse(localStorage.getItem('prodotti_extra')) || [];
 
-    function salvaSuDisco() { 
-        localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
-        localStorage.setItem('pos_data', JSON.stringify(ordiniArchiviati));
-        localStorage.setItem('archivioProforma', JSON.stringify(archivioProforma));
-        localStorage.setItem('contatoreProforma', contatoreProforma);
-    }
+   function salvaSuDisco() { 
+    // 1. Salva sempre una copia locale (per sicurezza)
+    localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
+    localStorage.setItem('pos_data', JSON.stringify(ordiniArchiviati));
+    localStorage.setItem('archivioProforma', JSON.stringify(archivioProforma));
+    localStorage.setItem('contatoreProforma', contatoreProforma);
+
+    // 2. SINCRONIZZA IL LISTINO SU FIREBASE
+    db.collection("configurazione").doc("listino").set({
+        articoli: prodottiExtra
+    }).then(() => {
+        console.log("Cloud Update: Success");
+    }).catch((error) => {
+        console.error("Cloud Update Error: ", error);
+    });
+}
 
     // --- FUNZIONE DI INVIO A RAW BT ---
     function inviaARawBT(testo) {
@@ -259,63 +308,47 @@ function menuEliminaArticolo() {
         inviaARawBT(testo);
     }
 
-  function chiusura() {
-    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-    if (!confirm("Effettuare la CHIUSURA giornaliera? I dati verranno azzerati.")) return;
+    function chiusura() {
+        if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
+        if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
 
-    // Inizializziamo i contenitori per i totali
-    let totali = { 'RIST': 0, 'CAME': 0, 'TASS': 0 };
-    let dettagli = { 'RIST': "", 'CAME': "", 'TASS': "" };
+        let c = { RIST: 0, CAME: 0, TASS: 0 };
+        let d = { RIST: "", CAME: "", TASS: "" };
 
-    archivioProforma.forEach(p => {
-        if(!p.articoli) return;
-        p.articoli.forEach(art => {
-            let importo = (art.prezzo || 0) * (art.qta || 0);
-            let rep = art.reparto || "RIST"; // Se manca, va in Ristorante
-            
-            // Somma l'importo al reparto giusto
-            if (totali.hasOwnProperty(rep)) {
-                totali[rep] += importo;
-                dettagli[rep] += `${MARGINE_STAMPA}${p.tavolo.toString().padEnd(10)} EUR ${importo.toFixed(2).padStart(8)}\n`;
-            }
+        archivioProforma.forEach(p => {
+            if(!p.articoli) return;
+            p.articoli.forEach(art => {
+                let imp = (art.prezzo || 0) * (art.qta || 0);
+                let rep = art.reparto || "RIST";
+                if (!c.hasOwnProperty(rep)) rep = "RIST";
+                c[rep] += imp;
+                d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+            });
         });
-    });
 
-    // Costruzione del testo per la stampante
-    let t = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
-    t += MARGINE_STAMPA + "=".repeat(LARGHEZZA_RIGA) + "\n";
+        let testo = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** RISTORANTE/BAR **\n";
+        testo += (d.RIST || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE RIST: EUR " + c.RIST.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** CAMERE **\n";
+        testo += (d.CAME || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE CAME: EUR " + c.CAME.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "** TASSA SOGGIORNO **\n";
+        testo += (d.TASS || MARGINE_STAMPA + "(nessuna voce)\n");
+        testo += MARGINE_STAMPA + "TOTALE TASS: EUR " + c.TASS.toFixed(2).padStart(8) + "\n";
+        testo += MARGINE_STAMPA + "------------------------------\n";
+        testo += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + (c.RIST+c.CAME+c.TASS).toFixed(2) + "\n\n\n\n\n";
 
-    // Sezione Ristorante
-    t += MARGINE_STAMPA + "** REPARTO RISTORANTE/BAR **\n";
-    t += dettagli.RIST || (MARGINE_STAMPA + "(nessuna vendita)\n");
-    t += MARGINE_STAMPA + "TOTALE RIST: EUR " + totali.RIST.toFixed(2).padStart(8) + "\n";
-    t += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
-
-    // Sezione Camere
-    t += MARGINE_STAMPA + "** REPARTO CAMERE **\n";
-    t += dettagli.CAME || (MARGINE_STAMPA + "(nessuna vendita)\n");
-    t += MARGINE_STAMPA + "TOTALE CAME: EUR " + totali.CAME.toFixed(2).padStart(8) + "\n";
-    t += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
-
-    // Sezione Tassa Soggiorno
-    t += MARGINE_STAMPA + "** TASSA DI SOGGIORNO **\n";
-    t += dettagli.TASS || (MARGINE_STAMPA + "(nessuna vendita)\n");
-    t += MARGINE_STAMPA + "TOTALE TASS: EUR " + totali.TASS.toFixed(2).padStart(8) + "\n";
-    
-    t += MARGINE_STAMPA + "=".repeat(LARGHEZZA_RIGA) + "\n";
-    let totaleGenerale = totali.RIST + totali.CAME + totali.TASS;
-    t += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + totaleGenerale.toFixed(2).padStart(8) + "\n\n\n\n\n";
-
-    inviaARawBT(t);
-    
-    // Reset finale
-    if(confirm("Stampato correttamente? Clicca OK per azzerare la giornata.")) {
+        inviaARawBT(testo);
+        
         archivioProforma = []; 
         contatoreProforma = 1; 
         salvaSuDisco(); 
         location.reload();
     }
-}
 
     // --- LOGICA INTERFACCIA (Invariata) ---
     function digita(v) { buffer += v; aggiornaDisplay(); }
@@ -566,24 +599,26 @@ function mostraCategoria(cat) {
         ordiniArchiviati.splice(idx, 1);
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
+
 function aggiungiNuovoArticoloListino() {
-    const nome = prompt("Nome Articolo:"); 
+    const nome = prompt("Nome Dessert:"); 
     if(!nome) return;
     
-    const prezzo = parseFloat(prompt("Prezzo:", "0").replace(',', '.'));
-    let cat = prompt("Categoria (bevande, dessert, camere, extra...):", catAttuale).toLowerCase().trim();
+    const prezzoInput = prompt("Prezzo:", "0");
+    if(prezzoInput === null) return;
+    const prezzo = parseFloat(prezzoInput.replace(',', '.'));
 
-    // DETERMINA IL REPARTO IN AUTOMATICO
-    let reparto = 'RIST'; // Default
-    if (cat === 'camere') reparto = 'CAME';
-    if (cat === 'tassa' || nome.toLowerCase().includes('tassa')) reparto = 'TASS';
+    // Suggerisce la categoria in cui ti trovi (es. dessert)
+    let cat = prompt("Categoria (bevande, vini, dessert, camere...):", catAttuale); 
+    if(!cat) return;
+    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
 
     prodottiExtra.push({ 
         nome: nome, 
         prezzo: prezzo, 
         cat: cat, 
-        reparto: reparto, // <--- Fondamentale per la chiusura
-        colore: 'azzurro'
+        reparto: 'RIST', 
+        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
     });
 
     salvaSuDisco(); 
