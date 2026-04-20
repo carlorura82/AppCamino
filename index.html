@@ -231,23 +231,19 @@
     function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
 
     function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
-        let qta = 1, prezzoFinale = prezzoBase;
-        if (buffer && buffer !== "") {
-            if (buffer.includes('x')) {
-                let parti = buffer.split('x');
-                qta = parseFloat(parti[0]) || 1;
-                if (parti[1] && parti[1] !== "") prezzoFinale = parseFloat(parti[1]);
-            } else { 
-                prezzoFinale = parseFloat(buffer) || prezzoBase; 
-            }
-        }
-        articoliInCorso.push({ 
-            id: Date.now() + Math.random(), 
-            nome: nome, prezzo: prezzoFinale, qta: qta, reparto: reparto || 'RIST'
-        });
-        renderingOrdine();
-        cancellaBuffer();
-    }
+    // ... (tieni il tuo codice esistente sopra) ...
+    
+    articoliInCorso.push({ 
+        id: Date.now() + Math.random(), 
+        nome: nome, prezzo: prezzoFinale, qta: qta, reparto: reparto || 'RIST'
+    });
+    
+    renderingOrdine();
+    cancellaBuffer();
+    
+    // AGGIUNGI QUESTA RIGA:
+    localStorage.setItem('ordine_corrente', JSON.stringify(articoliInCorso));
+}
 
     function renderingOrdine() {
         const lista = document.getElementById('lista-ordine');
