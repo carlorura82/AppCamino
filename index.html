@@ -220,7 +220,15 @@ function mostraPaletteColori() {
         palette.appendChild(div);
     });
 }
-
+function attivaSpostamento() {
+    modalitaSpostamento = true; 
+    document.getElementById('custom-menu').style.display = 'none'; 
+    
+    // Rinfreschiamo la categoria attuale per attivare i bordi tratteggiati e il draggable
+    mostraCategoria(catAttuale);
+    
+    alert("MODALITÀ SPOSTA ATTIVA\n\n1. Trascina un articolo sopra un altro\n2. Verrà inserito in quella posizione\n3. La modalità si disattiva dopo lo spostamento");
+}
 function menuEliminaArticolo() {
     if (confirm(`Vuoi eliminare definitivamente ${articoloInModifica.nome}?`)) {
         prodottiExtra = prodottiExtra.filter(p => p !== articoloInModifica);
