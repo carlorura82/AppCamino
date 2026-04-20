@@ -371,118 +371,70 @@ function mostraCategoria(cat) {
     if(!griglia) return;
     griglia.innerHTML = '';
 
-    // --- AGGIUNTA: Tasto per uscire dallo spostamento ---
-    if (modalitaSpostamento) {
-        const btnFine = document.createElement('button');
-        btnFine.className = 'prodotto';
-        btnFine.style.backgroundColor = '#2ecc71'; // Verde
-        btnFine.innerHTML = '<b>FINITO ✅</b><br><small>Salva ordine</small>';
-        btnFine.onclick = () => {
-            modalitaSpostamento = false;
-            indicePrimoElemento = null;
-            mostraCategoria(catAttuale);
-        };
-        griglia.appendChild(btnFine);
-    }
-  
-
-   
+    // Abbiamo rimosso il "btnFine" che veniva creato qui dentro
 
     const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
 
-    filtrati.forEach((p) => {
+    filtrati.forEach((p, index) => {
         const btn = document.createElement('button'); 
         btn.className = 'prodotto';
         btn.style.backgroundColor = getColoreCSS(p.colore);
         
-        // --- BLOCCO COMPORTAMENTI NATIVI DEL TABLET (Lente, selezione testo) ---
         btn.style.userSelect = "none";
         btn.style.webkitUserSelect = "none";
         btn.style.webkitTouchCallout = "none";
 
-        // Imposta il trascinamento SOLO se abbiamo cliccato "Sposta"
+        // UI Modalità Spostamento: Solo bordi e feedback visivo
         if (modalitaSpostamento) {
-            btn.setAttribute('draggable', true);
-            btn.style.border = "3px dashed rgba(255,255,255,0.7)";
-        } else {
-            btn.setAttribute('draggable', false);
+            btn.style.border = "3px dashed white";
+            if (indicePrimoElemento === index) {
+                btn.style.border = "4px solid #f1c40f"; // Giallo per il primo selezionato
+                btn.style.transform = "scale(1.05)";
+            }
         }
 
-btn.onclick = () => {
-    if(modalitaSpostamento) {
-        if (indicePrimoElemento === null) {
-            indicePrimoElemento = index; 
-            mostraCategoria(catAttuale); 
-        } else {
-            // Logica di scambio (rimane identica a prima)
-            const oggettoDa = filtrati[indicePrimoElemento];
-            const oggettoA = filtrati[index];
-            const daIndexVero = prodottiExtra.indexOf(oggettoDa);
-            const aIndexVero = prodottiExtra.indexOf(oggettoA);
-            
-            const temp = prodottiExtra[daIndexVero];
-            prodottiExtra[daIndexVero] = prodottiExtra[aIndexVero];
-            prodottiExtra[aIndexVero] = temp;
+        btn.onclick = () => {
+            if(modalitaSpostamento) {
+                if (indicePrimoElemento === null) {
+                    indicePrimoElemento = index; 
+                    mostraCategoria(catAttuale); 
+                } else {
+                    const oggettoDa = filtrati[indicePrimoElemento];
+                    const oggettoA = filtrati[index];
+                    const daIndexVero = prodottiExtra.indexOf(oggettoDa);
+                    const aIndexVero = prodottiExtra.indexOf(oggettoA);
+                    
+                    const temp = prodottiExtra[daIndexVero];
+                    prodottiExtra[daIndexVero] = prodottiExtra[aIndexVero];
+                    prodottiExtra[aIndexVero] = temp;
 
-            indicePrimoElemento = null; 
-            salvaSuDisco();
-            mostraCategoria(catAttuale); 
-            // NOTA: Non disattiviamo la modalità qui, resta attiva!
-        }
-    } else {
-        aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-    }
-};
+                    indicePrimoElemento = null; 
+                    salvaSuDisco();
+                    mostraCategoria(catAttuale); 
+                    // La modalità resta attiva, si chiude solo dalla barra verde in alto
+                }
+            } else {
+                aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
+            }
+        };
 
-        // --- NUOVA GESTIONE PRESSIONE LUNGA A PROVA DI TABLET ---
+        // ... gestione touchstart/move/end per il menu contestuale (invariata) ...
         let toccoInMovimento = false;
-
         btn.ontouchstart = (e) => {
             if(modalitaSpostamento) return;
             toccoInMovimento = false;
-            
-            // Salviamo subito le coordinate X e Y del tocco
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
-            
             timerPressione = setTimeout(() => {
-                if(!toccoInMovimento) {
-                    apriMenuContestuale(x, y, p); // Passiamo le coordinate esatte
-                }
-            }, 600); // 600 millisecondi di pressione
+                if(!toccoInMovimento) apriMenuContestuale(x, y, p);
+            }, 600);
         };
-
-        btn.ontouchmove = () => { 
-            toccoInMovimento = true; // Se il dito scivola, capiamo che non è una pressione lunga
-            clearTimeout(timerPressione); 
-        };
-        
+        btn.ontouchmove = () => { toccoInMovimento = true; clearTimeout(timerPressione); };
         btn.ontouchend = () => clearTimeout(timerPressione);
         
-        // Per il PC
         btn.oncontextmenu = (e) => {
             e.preventDefault();
             if(!modalitaSpostamento) apriMenuContestuale(e.clientX, e.clientY, p);
-        };
-
-        // --- DRAG & DROP ---
-        btn.ondragstart = (e) => { e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p)); };
-        btn.ondragover = (e) => e.preventDefault();
-        
-        btn.ondrop = (e) => {
-            e.preventDefault();
-            if (!modalitaSpostamento) return; 
-            
-            const daIndexVero = parseInt(e.dataTransfer.getData('text/plain'));
-            const aIndexVero = prodottiExtra.indexOf(p);
-            
-            // Spostamento nell'array
-            const el = prodottiExtra.splice(daIndexVero, 1)[0];
-            prodottiExtra.splice(aIndexVero, 0, el);
-            
-            // NON settiamo modalitaSpostamento = false qui!
-            salvaSuDisco();
-            mostraCategoria(catAttuale);
         };
 
         btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
