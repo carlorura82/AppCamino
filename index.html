@@ -363,96 +363,123 @@ function modificaArticolo(prodotto) {
 let timerPressione;
 let modalitaSpostamento = false; // <-- Nuova variabile per gestire lo stato
 
+let indicePrimoElemento = null; 
 
+function mostraCategoria(cat) {
+    catAttuale = cat.toLowerCase().trim();
+    const griglia = document.getElementById('griglia-prodotti'); 
+    if(!griglia) return;
+    griglia.innerHTML = '';
 
-let indicePrimoElemento = null; // Aggiungi questa variabile globale all'inizio del file
+    
+  
 
-348 function mostraCategoria(cat) {
-349     catAttuale = cat.toLowerCase().trim();
-350     const griglia = document.getElementById('griglia-prodotti'); 
-351     if(!griglia) return;
-352     griglia.innerHTML = '';
-353 
-354     // Filtriamo i prodotti della categoria selezionata
-355     const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
-356 
-357     filtrati.forEach((p, index) => {
-358         const btn = document.createElement('button'); 
-359         btn.className = 'prodotto';
-360         btn.style.backgroundColor = getColoreCSS(p.colore);
-361         
-362         // Impedisce selezioni fastidiose su tablet durante lo spostamento
-363         btn.style.userSelect = "none";
-364         btn.style.webkitUserSelect = "none";
-365         btn.style.touchAction = "manipulation"; 
-366 
-367         if (modalitaSpostamento) {
-368             btn.style.border = "3px dashed white";
-369             // Feedback visivo per il primo elemento selezionato su tablet
-370             if (indicePrimoElemento === index) {
-371                 btn.style.border = "4px solid #f1c40f";
-372                 btn.style.transform = "scale(1.05)";
-373             }
-374         }
-375 
-376         // --- LOGICA CLICK (SPOSTAMENTO TOUCH + VENDITA) ---
-377         btn.onclick = () => {
-378             if(modalitaSpostamento) {
-379                 if (indicePrimoElemento === null) {
-380                     // Primo tocco: seleziona
-381                     indicePrimoElemento = index;
-382                     mostraCategoria(catAttuale); 
-383                 } else {
-384                     // Secondo tocco: scambia
-385                     const o1 = filtrati[indicePrimoElemento];
-386                     const o2 = filtrati[index];
-387                     const idx1 = prodottiExtra.indexOf(o1);
-388                     const idx2 = prodottiExtra.indexOf(o2);
-389                     
-390                     const temp = prodottiExtra[idx1];
-391                     prodottiExtra[idx1] = prodottiExtra[idx2];
-392                     prodottiExtra[idx2] = temp;
-393 
-394                     indicePrimoElemento = null; 
-395                     salvaSuDisco();
-396                     mostraCategoria(catAttuale);
-397                 }
-398             } else {
-399                 // Modalità vendita normale
-400                 aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-401             }
-402         };
-403 
-404         // --- LOGICA DRAG & DROP (PER MOUSE PC) ---
-405         if (modalitaSpostamento) {
-406             btn.setAttribute('draggable', true);
-407             btn.ondragstart = (e) => e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p));
-408             btn.ondragover = (e) => e.preventDefault();
-409             btn.ondrop = (e) => {
-410                 e.preventDefault();
-411                 const daIdx = e.dataTransfer.getData('text/plain');
-412                 const aIdx = prodottiExtra.indexOf(p);
-413                 const el = prodottiExtra.splice(daIdx, 1)[0];
-414                 prodottiExtra.splice(aIdx, 0, el);
-415                 salvaSuDisco();
-416                 mostraCategoria(catAttuale);
-417             };
-418         }
-419 
-420         // --- PRESSIONE LUNGA (MENU CONTESTUALE) ---
-421         btn.ontouchstart = (e) => {
-422             if(modalitaSpostamento) return;
-423             const x = e.touches[0].clientX;
-424             const y = e.touches[0].clientY;
-425             timerPressione = setTimeout(() => apriMenuContestuale(x, y, p), 600);
-426         };
-427         btn.ontouchend = () => clearTimeout(timerPressione);
-428         btn.ontouchmove = () => clearTimeout(timerPressione);
-429 
-430         btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
-431         griglia.appendChild(btn);
-432     });
-433 }
+   
+
+    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
+
+    filtrati.forEach((p) => {
+        const btn = document.createElement('button'); 
+        btn.className = 'prodotto';
+        btn.style.backgroundColor = getColoreCSS(p.colore);
+        
+        // --- BLOCCO COMPORTAMENTI NATIVI DEL TABLET (Lente, selezione testo) ---
+        btn.style.userSelect = "none";
+        btn.style.webkitUserSelect = "none";
+        btn.style.webkitTouchCallout = "none";
+
+        // Imposta il trascinamento SOLO se abbiamo cliccato "Sposta"
+        if (modalitaSpostamento) {
+            btn.setAttribute('draggable', true);
+            btn.style.border = "3px dashed rgba(255,255,255,0.7)";
+        } else {
+            btn.setAttribute('draggable', false);
+        }
+
+btn.onclick = () => {
+            if(modalitaSpostamento) {
+                if (indicePrimoElemento === null) {
+                    indicePrimoElemento = index; 
+                    mostraCategoria(catAttuale); 
+                } else {
+                    // Identifichiamo gli oggetti reali
+                    const oggettoDa = filtrati[indicePrimoElemento];
+                    const oggettoA = filtrati[index];
+
+                    // Troviamo le posizioni nell'array vero
+                    const daIndexVero = prodottiExtra.indexOf(oggettoDa);
+                    const aIndexVero = prodottiExtra.indexOf(oggettoA);
+                    
+                    // Eseguiamo lo scambio
+                    const temp = prodottiExtra[daIndexVero];
+                    prodottiExtra[daIndexVero] = prodottiExtra[aIndexVero];
+                    prodottiExtra[aIndexVero] = temp;
+
+                    // RESET dell'indice temporaneo, ma modalitaSpostamento RESTA TRUE
+                    indicePrimoElemento = null; 
+                    salvaSuDisco();
+                    mostraCategoria(catAttuale);
+                }
+            } else {
+                aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
+            }
+        };
+
+        // --- NUOVA GESTIONE PRESSIONE LUNGA A PROVA DI TABLET ---
+        let toccoInMovimento = false;
+
+        btn.ontouchstart = (e) => {
+            if(modalitaSpostamento) return;
+            toccoInMovimento = false;
+            
+            // Salviamo subito le coordinate X e Y del tocco
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+            
+            timerPressione = setTimeout(() => {
+                if(!toccoInMovimento) {
+                    apriMenuContestuale(x, y, p); // Passiamo le coordinate esatte
+                }
+            }, 600); // 600 millisecondi di pressione
+        };
+
+        btn.ontouchmove = () => { 
+            toccoInMovimento = true; // Se il dito scivola, capiamo che non è una pressione lunga
+            clearTimeout(timerPressione); 
+        };
+        
+        btn.ontouchend = () => clearTimeout(timerPressione);
+        
+        // Per il PC
+        btn.oncontextmenu = (e) => {
+            e.preventDefault();
+            if(!modalitaSpostamento) apriMenuContestuale(e.clientX, e.clientY, p);
+        };
+
+        // --- DRAG & DROP ---
+        btn.ondragstart = (e) => { e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p)); };
+        btn.ondragover = (e) => e.preventDefault();
+        
+        btn.ondrop = (e) => {
+            e.preventDefault();
+            if (!modalitaSpostamento) return; 
+            
+            const daIndexVero = parseInt(e.dataTransfer.getData('text/plain'));
+            const aIndexVero = prodottiExtra.indexOf(p);
+            
+            // Spostamento nell'array
+            const el = prodottiExtra.splice(daIndexVero, 1)[0];
+            prodottiExtra.splice(aIndexVero, 0, el);
+            
+            // NON settiamo modalitaSpostamento = false qui!
+            salvaSuDisco();
+            mostraCategoria(catAttuale);
+        };
+
+        btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
+        griglia.appendChild(btn);
+    });
+}
 function apriMenuContestuale(x, y, prodotto) {
     articoloInModifica = prodotto;
     const menu = document.getElementById('custom-menu');
