@@ -414,6 +414,51 @@ function aggiungiNuovoArticoloListino() {
             return;
         }
     }
+    // --- LOGICA TRASCINAMENTO ---
+let indexTrascinato = null;
+
+function mostraCategoria(cat) {
+    catAttuale = cat.toLowerCase().trim();
+    const griglia = document.getElementById('griglia-prodotti'); 
+    if(!griglia) return;
+    griglia.innerHTML = '';
+
+    // Filtriamo i prodotti della categoria attuale
+    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
+
+    filtrati.forEach((p) => {
+        const indexOriginale = prodottiExtra.indexOf(p);
+        const btn = document.createElement('button'); 
+        btn.className = 'prodotto';
+        btn.style.backgroundColor = getColoreCSS(p.colore);
+        
+        // Rendiamo il tasto trascinabile
+        btn.setAttribute('draggable', true);
+
+        // --- EVENTI DRAG & DROP ---
+        btn.ondragstart = (e) => {
+            indexTrascinato = indexOriginale;
+            e.target.style.opacity = "0.4";
+        };
+
+        btn.ondragend = (e) => {
+            e.target.style.opacity = "1";
+            indexTrascinato = null;
+        };
+
+        btn.ondragover = (e) => e.preventDefault(); // Permette il drop
+
+        btn.ondrop = (e) => {
+            e.preventDefault();
+            if (indexTrascinato !== null && indexTrascinato !== indexOriginale) {
+                // Spostiamo l'elemento nell'array principale
+                const elemento = prodottiExtra.splice(indexTrascinato, 1)[0];
+                prodottiExtra.splice(indexOriginale, 0, elemento);
+                
+                salvaSuDisco();
+                mostraCategoria(catAttuale); // Ricarica la griglia ordinata
+            }
+        };
 function mostraDettaglio(nome) {
         document.getElementById('area-mappa').style.display = 'none';
         document.getElementById('lista-scontrini-tavolo').style.display = 'block';
