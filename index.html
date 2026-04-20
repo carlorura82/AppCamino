@@ -360,14 +360,30 @@
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
 
-    function aggiungiNuovoArticoloListino() {
-        const nome = prompt("Nome Prodotto:"); if(!nome) return;
-        const prezzo = parseFloat(prompt("Prezzo:", "0.00").replace(',', '.'));
-        let cat = prompt("Categoria:", catAttuale).toLowerCase().trim();
-        prodottiExtra.push({ nome: nome, prezzo: prezzo, cat: cat, reparto: 'RIST', colore: 'azzurro' });
-        salvaSuDisco(); mostraCategoria(cat);
-    }
+function aggiungiNuovoArticoloListino() {
+    const nome = prompt("Nome Dessert:"); 
+    if(!nome) return;
+    
+    const prezzoInput = prompt("Prezzo:", "0.00");
+    if(prezzoInput === null) return;
+    const prezzo = parseFloat(prezzoInput.replace(',', '.'));
 
+    // Suggerisce la categoria in cui ti trovi (es. dessert)
+    let cat = prompt("Categoria (bevande, vini, dessert...):", catAttuale); 
+    if(!cat) return;
+    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
+
+    prodottiExtra.push({ 
+        nome: nome, 
+        prezzo: prezzo, 
+        cat: cat, 
+        reparto: 'RIST', 
+        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
+    });
+
+    salvaSuDisco(); 
+    mostraCategoria(cat); 
+}
     function richiama(id) {
         const idx = ordiniArchiviati.findIndex(o => o.id === id);
         articoliInCorso = [...ordiniArchiviati[idx].articoli];
