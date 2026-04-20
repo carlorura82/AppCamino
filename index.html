@@ -490,23 +490,25 @@ function mostraDettaglio(nome) {
         alert("Proforma Unificato inviato a Raw BT");
     }
    window.onload = () => {
-    // Recupera i prodotti extra salvati
+    // 1. Recupera i prodotti extra (quelli aggiunti con +voce)
     const extraSalvati = localStorage.getItem('prodotti_extra');
     if (extraSalvati) {
         prodottiExtra = JSON.parse(extraSalvati);
-        // Rigenera i tasti per ogni prodotto salvato
-        prodottiExtra.forEach(prod => {
-            creaTastoProdotto(prod.nome, prod.prezzo, prod.categoria);
-        });
+        console.log("Prodotti extra caricati:", prodottiExtra.length);
     }
     
-    // Recupera l'ordine in corso (se c'era)
+    // 2. Recupera l'ordine in corso (il conto che stavi scrivendo)
     const ordineSospeso = localStorage.getItem('ordine_corrente');
     if (ordineSospeso) {
         carrello = JSON.parse(ordineSospeso);
-        aggiornaInterfacciaCarrello(); 
+        // Assicurati che questa funzione esista per ridisegnare la lista a destra
+        if (typeof aggiornaInterfacciaCarrello === "function") {
+            aggiornaInterfacciaCarrello(); 
+        }
     }
 
+    // 3. Mostra la categoria iniziale
+    // Questa funzione leggerà automaticamente i prodottiExtra e creerà i tasti
     mostraCategoria('bevande'); 
 };
 
