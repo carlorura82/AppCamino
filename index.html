@@ -265,24 +265,73 @@
         });
         document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
     }
+function modificaArticolo(prodotto) {
+    const nuovoNome = prompt("Modifica Nome:", prodotto.nome);
+    if (!nuovoNome) return;
 
-    function mostraCategoria(cat) {
-        catAttuale = cat.toLowerCase().trim();
-        const griglia = document.getElementById('griglia-prodotti'); 
-        if(!griglia) return;
-        griglia.innerHTML = '';
-        const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
-        filtrati.forEach((p) => {
-            const indexOriginale = prodottiExtra.indexOf(p);
-            const btn = document.createElement('button'); 
-            btn.className = 'prodotto';
-            btn.style.backgroundColor = getColoreCSS(p.colore);
-            btn.setAttribute('draggable', true);
-            btn.onclick = () => aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-            btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
-            griglia.appendChild(btn);
-        });
-    }
+    const nuovoPrezzo = prompt("Modifica Prezzo:", prodotto.prezzo);
+    if (nuovoPrezzo === null) return;
+
+    const nuovoColore = prompt("Cambia Colore (azzurro, verde, viola, arancione, rosso, giallo):", prodotto.colore);
+    
+    // Aggiorna i dati nell'oggetto originale
+    prodotto.nome = nuovoNome;
+    prodotto.prezzo = parseFloat(nuovoPrezzo.toString().replace(',', '.'));
+    prodotto.colore = nuovoColore.toLowerCase().trim();
+
+    salvaSuDisco();
+    mostraCategoria(catAttuale);
+    alert("Articolo aggiornato!");
+}
+  function mostraCategoria(cat) {
+    catAttuale = cat.toLowerCase().trim();
+    const griglia = document.getElementById('griglia-prodotti'); 
+    if(!griglia) return;
+    griglia.innerHTML = '';
+
+    // Filtriamo i prodotti della categoria attuale
+    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
+
+    filtrati.forEach((p) => {
+        const btn = document.createElement('button'); 
+        btn.className = 'prodotto';
+        btn.style.backgroundColor = getColoreCSS(p.colore);
+        btn.setAttribute('draggable', true); // Rende il tasto trascinabile
+
+        // --- GESTIONE CLICK E MODIFICA ---
+        // Click normale: aggiunge all'ordine
+        btn.onclick = () => aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
+        
+        // Click destro (o pressione lunga): modifica prodotto
+        btn.oncontextmenu = (e) => {
+            e.preventDefault();
+            modificaArticolo(p);
+        };
+
+        // --- LOGICA DRAG & DROP ---
+        btn.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p));
+        };
+
+        btn.ondragover = (e) => e.preventDefault();
+
+        btn.ondrop = (e) => {
+            e.preventDefault();
+            const indexTrascinato = e.dataTransfer.getData('text/plain');
+            const indexDestinazione = prodottiExtra.indexOf(p);
+            
+            // Scambia di posto nell'array
+            const elemento = prodottiExtra.splice(indexTrascinato, 1)[0];
+            prodottiExtra.splice(indexDestinazione, 0, elemento);
+            
+            salvaSuDisco();
+            mostraCategoria(catAttuale);
+        };
+
+        btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
+        griglia.appendChild(btn);
+    });
+}
 
     function getColoreCSS(c) {
         const colori = { 'azzurro': '#3498db', 'verde': '#27ae60', 'viola': '#9b59b6', 'arancione': '#e67e22', 'rosso': '#e74c3c', 'giallo': '#f1c40f' };
