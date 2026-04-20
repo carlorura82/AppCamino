@@ -242,12 +242,13 @@
             }
         }
         articoliInCorso.push({ 
-            id: Date.now() + Math.random(), 
-            nome: nome, prezzo: prezzoFinale, qta: qta, reparto: reparto || 'RIST'
-        });
+        id: Date.now() + Math.random(), 
+        nome: nome, prezzo: prezzoFinale, qta: qta, reparto: reparto || 'RIST'
+    });
         renderingOrdine();
         cancellaBuffer();
-    }
+    localStorage.setItem('ordine_corrente', JSON.stringify(articoliInCorso));
+}
 
     function renderingOrdine() {
         const lista = document.getElementById('lista-ordine');
