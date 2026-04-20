@@ -363,7 +363,9 @@ function modificaArticolo(prodotto) {
 let timerPressione;
 let modalitaSpostamento = false; // <-- Nuova variabile per gestire lo stato
 
-let indicePrimoElemento = null; 
+
+
+let indicePrimoElemento = null; // Aggiungi questa variabile globale all'inizio del file
 
 function mostraCategoria(cat) {
     catAttuale = cat.toLowerCase().trim();
@@ -371,51 +373,47 @@ function mostraCategoria(cat) {
     if(!griglia) return;
     griglia.innerHTML = '';
 
-    
-  
-
-   
-
     const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
 
-    filtrati.forEach((p) => {
+    filtrati.forEach((p, index) => {
         const btn = document.createElement('button'); 
         btn.className = 'prodotto';
         btn.style.backgroundColor = getColoreCSS(p.colore);
         
-        // --- BLOCCO COMPORTAMENTI NATIVI DEL TABLET (Lente, selezione testo) ---
+        // Impedisce la selezione del testo fastidiosa su tablet
         btn.style.userSelect = "none";
         btn.style.webkitUserSelect = "none";
-        btn.style.webkitTouchCallout = "none";
 
-        // Imposta il trascinamento SOLO se abbiamo cliccato "Sposta"
         if (modalitaSpostamento) {
             btn.setAttribute('draggable', true);
-            btn.style.border = "3px dashed rgba(255,255,255,0.7)";
-        } else {
-            btn.setAttribute('draggable', false);
+            btn.style.border = "3px dashed white";
+            
+            // Se è il primo elemento toccato, lo evidenziamo in giallo
+            if (indicePrimoElemento === index) {
+                btn.style.border = "4px solid #f1c40f";
+                btn.style.transform = "scale(1.05)";
+            }
         }
 
-btn.onclick = () => {
+        // --- GESTIONE CLICK / TOCCO ---
+        btn.onclick = () => {
             if(modalitaSpostamento) {
                 if (indicePrimoElemento === null) {
-                    indicePrimoElemento = index; 
-                    mostraCategoria(catAttuale); 
+                    // Primo tocco: memorizza l'indice
+                    indicePrimoElemento = index;
+                    mostraCategoria(catAttuale); // Rinfresca per mostrare l'evidenziazione
                 } else {
-                    // Identifichiamo gli oggetti reali
+                    // Secondo tocco: esegui lo scambio
                     const oggettoDa = filtrati[indicePrimoElemento];
                     const oggettoA = filtrati[index];
-
-                    // Troviamo le posizioni nell'array vero
+                    
                     const daIndexVero = prodottiExtra.indexOf(oggettoDa);
                     const aIndexVero = prodottiExtra.indexOf(oggettoA);
                     
-                    // Eseguiamo lo scambio
                     const temp = prodottiExtra[daIndexVero];
                     prodottiExtra[daIndexVero] = prodottiExtra[aIndexVero];
                     prodottiExtra[aIndexVero] = temp;
 
-                    // RESET dell'indice temporaneo, ma modalitaSpostamento RESTA TRUE
                     indicePrimoElemento = null; 
                     salvaSuDisco();
                     mostraCategoria(catAttuale);
@@ -425,56 +423,36 @@ btn.onclick = () => {
             }
         };
 
-        // --- NUOVA GESTIONE PRESSIONE LUNGA A PROVA DI TABLET ---
-        let toccoInMovimento = false;
-
-        btn.ontouchstart = (e) => {
-            if(modalitaSpostamento) return;
-            toccoInMovimento = false;
-            
-            // Salviamo subito le coordinate X e Y del tocco
-            const x = e.touches[0].clientX;
-            const y = e.touches[0].clientY;
-            
-            timerPressione = setTimeout(() => {
-                if(!toccoInMovimento) {
-                    apriMenuContestuale(x, y, p); // Passiamo le coordinate esatte
-                }
-            }, 600); // 600 millisecondi di pressione
+        // --- MANTIENI DRAG & DROP PER MOUSE (PC) ---
+        btn.ondragstart = (e) => {
+            if (!modalitaSpostamento) return;
+            e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p));
         };
 
-        btn.ontouchmove = () => { 
-            toccoInMovimento = true; // Se il dito scivola, capiamo che non è una pressione lunga
-            clearTimeout(timerPressione); 
-        };
-        
-        btn.ontouchend = () => clearTimeout(timerPressione);
-        
-        // Per il PC
-        btn.oncontextmenu = (e) => {
-            e.preventDefault();
-            if(!modalitaSpostamento) apriMenuContestuale(e.clientX, e.clientY, p);
-        };
-
-        // --- DRAG & DROP ---
-        btn.ondragstart = (e) => { e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p)); };
         btn.ondragover = (e) => e.preventDefault();
-        
+
         btn.ondrop = (e) => {
             e.preventDefault();
-            if (!modalitaSpostamento) return; 
-            
-            const daIndexVero = parseInt(e.dataTransfer.getData('text/plain'));
+            const daIndexVero = e.dataTransfer.getData('text/plain');
             const aIndexVero = prodottiExtra.indexOf(p);
             
-            // Spostamento nell'array
             const el = prodottiExtra.splice(daIndexVero, 1)[0];
             prodottiExtra.splice(aIndexVero, 0, el);
             
-            // NON settiamo modalitaSpostamento = false qui!
             salvaSuDisco();
             mostraCategoria(catAttuale);
         };
+
+        // --- GESTIONE PRESSIONE LUNGA (MENU CONTESTUALE) ---
+        let timerPressione;
+        btn.ontouchstart = (e) => {
+            if(modalitaSpostamento) return;
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+            timerPressione = setTimeout(() => apriMenuContestuale(x, y, p), 600);
+        };
+        btn.ontouchend = () => clearTimeout(timerPressione);
+        btn.ontouchmove = () => clearTimeout(timerPressione);
 
         btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
         griglia.appendChild(btn);
