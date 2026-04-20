@@ -18,21 +18,8 @@
         .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
         .area-sinistra { flex: 3; display: flex; flex-direction: column; border-right: 2px solid #1a252f; position: relative; }
         .area-prodotti { flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 65px; gap: 6px; padding: 10px; overflow-y: auto; align-content: start; }
-       .prodotto { 
-    border: none; 
-    border-radius: 4px; 
-    font-weight: bold; 
-    cursor: grab; /* Indica che l'elemento è trascinabile */
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    align-items: center; 
-    padding: 2px; 
-    text-align: center; 
-    color: white; 
-    font-size: 0.75rem; /* Testo leggermente più piccolo */
-    line-height: 0.9rem;
-} .prodotto:active { cursor: grabbing; }
+        .prodotto { border: none; border-radius: 4px; font-weight: bold; cursor: grab; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2px; text-align: center; color: white; font-size: 0.75rem; line-height: 0.9rem; }
+        .prodotto:active { cursor: grabbing; }
         .prodotto small { font-size: 0.65rem; opacity: 0.9; }
         #schermata-tavoli { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #2c3e50; display: none; flex-direction: column; padding: 20px; z-index: 20; box-sizing: border-box; overflow-y: auto; }
         .sezione-titolo { background: #1a252f; padding: 10px; margin: 15px 0 5px 0; border-radius: 4px; font-weight: bold; }
@@ -427,51 +414,6 @@ function aggiungiNuovoArticoloListino() {
             return;
         }
     }
-    // --- LOGICA TRASCINAMENTO ---
-let indexTrascinato = null;
-
-function mostraCategoria(cat) {
-    catAttuale = cat.toLowerCase().trim();
-    const griglia = document.getElementById('griglia-prodotti'); 
-    if(!griglia) return;
-    griglia.innerHTML = '';
-
-    // Filtriamo i prodotti della categoria attuale
-    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
-
-    filtrati.forEach((p) => {
-        const indexOriginale = prodottiExtra.indexOf(p);
-        const btn = document.createElement('button'); 
-        btn.className = 'prodotto';
-        btn.style.backgroundColor = getColoreCSS(p.colore);
-        
-        // Rendiamo il tasto trascinabile
-        btn.setAttribute('draggable', true);
-
-        // --- EVENTI DRAG & DROP ---
-        btn.ondragstart = (e) => {
-            indexTrascinato = indexOriginale;
-            e.target.style.opacity = "0.4";
-        };
-
-        btn.ondragend = (e) => {
-            e.target.style.opacity = "1";
-            indexTrascinato = null;
-        };
-
-        btn.ondragover = (e) => e.preventDefault(); // Permette il drop
-
-        btn.ondrop = (e) => {
-            e.preventDefault();
-            if (indexTrascinato !== null && indexTrascinato !== indexOriginale) {
-                // Spostiamo l'elemento nell'array principale
-                const elemento = prodottiExtra.splice(indexTrascinato, 1)[0];
-                prodottiExtra.splice(indexOriginale, 0, elemento);
-                
-                salvaSuDisco();
-                mostraCategoria(catAttuale); // Ricarica la griglia ordinata
-            }
-        };
 function mostraDettaglio(nome) {
         document.getElementById('area-mappa').style.display = 'none';
         document.getElementById('lista-scontrini-tavolo').style.display = 'block';
