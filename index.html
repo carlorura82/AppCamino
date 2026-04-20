@@ -176,7 +176,59 @@
         
         inviaARawBT(testo);
     }
+function menuModificaTesto() {
+    const n = prompt("Nuovo Nome:", articoloInModifica.nome);
+    const p = prompt("Nuovo Prezzo:", articoloInModifica.prezzo);
+    
+    if (n !== null) articoloInModifica.nome = n;
+    if (p !== null) articoloInModifica.prezzo = parseFloat(p.toString().replace(',', '.'));
+    
+    document.getElementById('custom-menu').style.display = 'none';
+    salvaSuDisco();
+    mostraCategoria(catAttuale);
+}
 
+function mostraPaletteColori() {
+    const palette = document.getElementById('palette-colori');
+    const menu = document.getElementById('custom-menu');
+    
+    palette.style.left = menu.style.left;
+    palette.style.top = (parseInt(menu.style.top) + 50) + "px"; // La mette leggermente sotto
+    palette.style.display = "grid";
+
+    // Usiamo i codici colore che hai già nel CSS
+    const coloriDisponibili = ['azzurro', 'verde', 'viola', 'arancione', 'rosso', 'giallo'];
+    palette.innerHTML = '';
+    
+    coloriDisponibili.forEach(c => {
+        const div = document.createElement('div');
+        div.style.width = "40px";
+        div.style.height = "40px";
+        div.style.backgroundColor = getColoreCSS(c);
+        div.style.borderRadius = "5px";
+        div.style.cursor = "pointer";
+        div.style.border = "1px solid #ccc";
+        
+        div.onclick = (e) => {
+            e.stopPropagation();
+            articoloInModifica.colore = c;
+            salvaSuDisco();
+            mostraCategoria(catAttuale);
+            palette.style.display = "none";
+            document.getElementById('custom-menu').style.display = 'none';
+        };
+        palette.appendChild(div);
+    });
+}
+
+function menuEliminaArticolo() {
+    if (confirm(`Vuoi eliminare definitivamente ${articoloInModifica.nome}?`)) {
+        prodottiExtra = prodottiExtra.filter(p => p !== articoloInModifica);
+        salvaSuDisco();
+        mostraCategoria(catAttuale);
+    }
+    document.getElementById('custom-menu').style.display = 'none';
+}
     function stampaCucina(nomeTavolo, articoli) {
         let testo = "\n" + MARGINE_STAMPA + "--- ORDINE CUCINA ---\n";
         testo += MARGINE_STAMPA + "TAVOLO: " + nomeTavolo + "\n";
@@ -384,19 +436,23 @@ function apriMenuContestuale(x, y, prodotto) {
     articoloInModifica = prodotto;
     const menu = document.getElementById('custom-menu');
     
-    // Posizioniamo il menu esattamente dove hai il dito
     menu.style.left = x + "px";
     menu.style.top = y + "px";
     menu.style.display = "block";
 
-    // Un piccolo ritardo (100ms) prima di attivare la chiusura cliccando fuori,
-    // altrimenti alzando il dito si potrebbe chiudere all'istante
+    // Impediamo che il click sul menu stesso lo chiuda accidentalmente
+    menu.onclick = (e) => {
+        e.stopPropagation();
+    };
+
+    // Chiudi se clicchi fuori (usiamo un timeout per evitare conflitti col tocco)
     setTimeout(() => {
-        document.onclick = () => { 
-            menu.style.display = "none"; 
-            document.getElementById('palette-colori').style.display = "none"; 
-            document.onclick = null; // Rimuove l'evento dopo aver chiuso
+        const chiudiMenu = () => {
+            menu.style.display = "none";
+            document.getElementById('palette-colori').style.display = "none";
+            document.removeEventListener('click', chiudiMenu);
         };
+        document.addEventListener('click', chiudiMenu);
     }, 100);
 }
 
