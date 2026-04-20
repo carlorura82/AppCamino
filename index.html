@@ -259,47 +259,63 @@ function menuEliminaArticolo() {
         inviaARawBT(testo);
     }
 
-    function chiusura() {
-        if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-        if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
+  function chiusura() {
+    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
+    if (!confirm("Effettuare la CHIUSURA giornaliera? I dati verranno azzerati.")) return;
 
-        let c = { RIST: 0, CAME: 0, TASS: 0 };
-        let d = { RIST: "", CAME: "", TASS: "" };
+    // Inizializziamo i contenitori per i totali
+    let totali = { 'RIST': 0, 'CAME': 0, 'TASS': 0 };
+    let dettagli = { 'RIST': "", 'CAME': "", 'TASS': "" };
 
-        archivioProforma.forEach(p => {
-            if(!p.articoli) return;
-            p.articoli.forEach(art => {
-                let imp = (art.prezzo || 0) * (art.qta || 0);
-                let rep = art.reparto || "RIST";
-                if (!c.hasOwnProperty(rep)) rep = "RIST";
-                c[rep] += imp;
-                d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
-            });
+    archivioProforma.forEach(p => {
+        if(!p.articoli) return;
+        p.articoli.forEach(art => {
+            let importo = (art.prezzo || 0) * (art.qta || 0);
+            let rep = art.reparto || "RIST"; // Se manca, va in Ristorante
+            
+            // Somma l'importo al reparto giusto
+            if (totali.hasOwnProperty(rep)) {
+                totali[rep] += importo;
+                dettagli[rep] += `${MARGINE_STAMPA}${p.tavolo.toString().padEnd(10)} EUR ${importo.toFixed(2).padStart(8)}\n`;
+            }
         });
+    });
 
-        let testo = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** RISTORANTE/BAR **\n";
-        testo += (d.RIST || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE RIST: EUR " + c.RIST.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** CAMERE **\n";
-        testo += (d.CAME || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE CAME: EUR " + c.CAME.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** TASSA SOGGIORNO **\n";
-        testo += (d.TASS || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE TASS: EUR " + c.TASS.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + (c.RIST+c.CAME+c.TASS).toFixed(2) + "\n\n\n\n\n";
+    // Costruzione del testo per la stampante
+    let t = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
+    t += MARGINE_STAMPA + "=".repeat(LARGHEZZA_RIGA) + "\n";
 
-        inviaARawBT(testo);
-        
+    // Sezione Ristorante
+    t += MARGINE_STAMPA + "** REPARTO RISTORANTE/BAR **\n";
+    t += dettagli.RIST || (MARGINE_STAMPA + "(nessuna vendita)\n");
+    t += MARGINE_STAMPA + "TOTALE RIST: EUR " + totali.RIST.toFixed(2).padStart(8) + "\n";
+    t += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+
+    // Sezione Camere
+    t += MARGINE_STAMPA + "** REPARTO CAMERE **\n";
+    t += dettagli.CAME || (MARGINE_STAMPA + "(nessuna vendita)\n");
+    t += MARGINE_STAMPA + "TOTALE CAME: EUR " + totali.CAME.toFixed(2).padStart(8) + "\n";
+    t += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+
+    // Sezione Tassa Soggiorno
+    t += MARGINE_STAMPA + "** TASSA DI SOGGIORNO **\n";
+    t += dettagli.TASS || (MARGINE_STAMPA + "(nessuna vendita)\n");
+    t += MARGINE_STAMPA + "TOTALE TASS: EUR " + totali.TASS.toFixed(2).padStart(8) + "\n";
+    
+    t += MARGINE_STAMPA + "=".repeat(LARGHEZZA_RIGA) + "\n";
+    let totaleGenerale = totali.RIST + totali.CAME + totali.TASS;
+    t += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + totaleGenerale.toFixed(2).padStart(8) + "\n\n\n\n\n";
+
+    inviaARawBT(t);
+    
+    // Reset finale
+    if(confirm("Stampato correttamente? Clicca OK per azzerare la giornata.")) {
         archivioProforma = []; 
         contatoreProforma = 1; 
         salvaSuDisco(); 
         location.reload();
     }
+}
 
     // --- LOGICA INTERFACCIA (Invariata) ---
     function digita(v) { buffer += v; aggiornaDisplay(); }
@@ -550,26 +566,24 @@ function mostraCategoria(cat) {
         ordiniArchiviati.splice(idx, 1);
         salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
     }
-
 function aggiungiNuovoArticoloListino() {
-    const nome = prompt("Nome Dessert:"); 
+    const nome = prompt("Nome Articolo:"); 
     if(!nome) return;
     
-    const prezzoInput = prompt("Prezzo:", "0");
-    if(prezzoInput === null) return;
-    const prezzo = parseFloat(prezzoInput.replace(',', '.'));
+    const prezzo = parseFloat(prompt("Prezzo:", "0").replace(',', '.'));
+    let cat = prompt("Categoria (bevande, dessert, camere, extra...):", catAttuale).toLowerCase().trim();
 
-    // Suggerisce la categoria in cui ti trovi (es. dessert)
-    let cat = prompt("Categoria (bevande, vini, dessert, camere...):", catAttuale); 
-    if(!cat) return;
-    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
+    // DETERMINA IL REPARTO IN AUTOMATICO
+    let reparto = 'RIST'; // Default
+    if (cat === 'camere') reparto = 'CAME';
+    if (cat === 'tassa' || nome.toLowerCase().includes('tassa')) reparto = 'TASS';
 
     prodottiExtra.push({ 
         nome: nome, 
         prezzo: prezzo, 
         cat: cat, 
-        reparto: 'RIST', 
-        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
+        reparto: reparto, // <--- Fondamentale per la chiusura
+        colore: 'azzurro'
     });
 
     salvaSuDisco(); 
