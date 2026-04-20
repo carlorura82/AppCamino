@@ -36,6 +36,25 @@
       }
     });
   }
+// Funzione per ascoltare i tavoli aperti da altri dispositivi
+function ascoltaTavoliDalCloud() {
+    db.collection("tavoli_aperti").onSnapshot((snapshot) => {
+        // Svuotiamo l'array locale e lo ripopoliamo con i dati aggiornati dal Cloud
+        ordiniArchiviati = [];
+        snapshot.forEach((doc) => {
+            ordiniArchiviati.push(doc.data());
+        });
+        console.log("Tavoli aggiornati dal Cloud");
+        
+        // Se la mappa dei tavoli è aperta, la ridisegna per farli apparire rossi
+        if (typeof aggiornaMappa === "function") {
+            aggiornaMappa();
+        }
+    });
+}
+
+// Avviamo anche questa all'apertura
+ascoltaTavoliDalCloud();
 
   // Avviamo la sincronizzazione
   caricaArticoliDalCloud();
@@ -547,14 +566,32 @@ function mostraCategoria(cat) {
         for(let i=1; i<=7; i++) creaBtn('Cam.', i, cam, 'camera-style');
     }
 
-    function selezionaTavolo(nome) {
-        if (articoliInCorso.length > 0) {
-            const nuovoOrdine = { id: Date.now(), tavolo: nome, ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), articoli: [...articoliInCorso], totale: totaleCorrente };
-            ordiniArchiviati.push(nuovoOrdine);
-            stampaCucina(nome, articoliInCorso);
-            salvaSuDisco(); svuotaOrdine(); chiudiTavoli();
-        } else { mostraDettaglio(nome); }
+   function selezionaTavolo(nome) {
+    if (articoliInCorso.length > 0) {
+        const nuovoOrdine = { 
+            id: Date.now(), 
+            tavolo: nome, 
+            ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            articoli: [...articoliInCorso], 
+            totale: totaleCorrente 
+        };
+        
+        ordiniArchiviati.push(nuovoOrdine);
+        stampaCucina(nome, articoliInCorso);
+        
+        // --- SINCRONIZZAZIONE TAVOLI CLOUD ---
+        db.collection("tavoli_aperti").doc(nuovoOrdine.id.toString()).set(nuovoOrdine)
+            .then(() => console.log("Tavolo sincronizzato online"))
+            .catch(err => console.error("Errore sincro tavolo:", err));
+        // -------------------------------------
+
+        salvaSuDisco(); 
+        svuotaOrdine(); 
+        chiudiTavoli();
+    } else { 
+        mostraDettaglio(nome); 
     }
+}
 
     function mostraDettaglio(nome) {
         document.getElementById('area-mappa').style.display = 'none';
@@ -589,16 +626,24 @@ function mostraCategoria(cat) {
     }
 
     function stampaSingoloDaTavolo(id) {
-        const idx = ordiniArchiviati.findIndex(o => o.id === id);
-        if (idx === -1) return;
-        const o = ordiniArchiviati[idx];
-        const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
-        stampaFinestra(dp);
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        ordiniArchiviati.splice(idx, 1);
-        salvaSuDisco(); chiudiTavoli(); aggiornaMappa();
-    }
+    const idx = ordiniArchiviati.findIndex(o => o.id === id);
+    if (idx === -1) return;
+    const o = ordiniArchiviati[idx];
+    const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
+    
+    stampaFinestra(dp);
+    archivioProforma.push(dp);
+    contatoreProforma++;
+    
+    // --- RIMOZIONE DAL CLOUD ---
+    db.collection("tavoli_aperti").doc(id.toString()).delete();
+    // ---------------------------
+
+    ordiniArchiviati.splice(idx, 1);
+    salvaSuDisco(); 
+    chiudiTavoli(); 
+    aggiornaMappa();
+}
 
 function aggiungiNuovoArticoloListino() {
     const nome = prompt("Nome Dessert:"); 
