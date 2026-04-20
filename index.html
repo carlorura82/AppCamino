@@ -333,13 +333,8 @@
     }
 
     function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
-    function svuotaOrdine() {
-    articoliInCorso = [];
-    renderingOrdine();
-    document.getElementById('tavolo-attuale').innerText = "---";
-    // AGGIUNGI QUESTA RIGA:
-    localStorage.removeItem('ordine_corrente');
-}
+   function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
+
     function emettiProforma() {
         if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
         const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
