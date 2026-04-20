@@ -361,28 +361,38 @@
     }
 
 function aggiungiNuovoArticoloListino() {
-    const nome = prompt("Nome Dessert:"); 
+    const nome = prompt("Nome Articolo:"); 
     if(!nome) return;
     
     const prezzoInput = prompt("Prezzo:", "0");
     if(prezzoInput === null) return;
     const prezzo = parseFloat(prezzoInput.replace(',', '.'));
 
-    // Suggerisce la categoria in cui ti trovi (es. dessert)
     let cat = prompt("Categoria (bevande, vini, dessert, camere...):", catAttuale); 
     if(!cat) return;
-    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
+    cat = cat.toLowerCase().trim();
 
-    prodottiExtra.push({ 
+    // 1. CREIAMO L'OGGETTO PRODOTTO
+    const nuovoProdotto = { 
         nome: nome, 
         prezzo: prezzo, 
         cat: cat, 
         reparto: 'RIST', 
-        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
-    });
+        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') 
+    };
 
-    salvaSuDisco(); 
-    mostraCategoria(cat); 
+    // 2. AGGIUNGIAMO ALL'ARRAY IN MEMORIA RAM
+    prodottiExtra.push(nuovoProdotto);
+
+    // 3. SALVIAMO NEL TABLET (LocalStorage)
+    // Trasformiamo l'intero elenco in una stringa e lo salviamo
+    localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
+
+    // 4. AGGIORNIAMO LA VISTA
+    // Ricarica la categoria attuale per far apparire subito il nuovo tasto
+    mostraCategoria(catAttuale); 
+    
+    alert("Articolo salvato correttamente!");
 }
     function richiama(id) {
         const idx = ordiniArchiviati.findIndex(o => o.id === id);
