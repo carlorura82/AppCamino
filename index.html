@@ -479,11 +479,26 @@ function mostraDettaglio(nome) {
         aggiornaMappa();
         alert("Proforma Unificato inviato a Raw BT");
     }
-    window.onload = () => {
-        const datiSalvati = localStorage.getItem('prodotti_extra');
-        if (datiSalvati) prodottiExtra = JSON.parse(datiSalvati);
-        mostraCategoria('bevande'); 
-    };
+   window.onload = () => {
+    // Recupera i prodotti extra salvati
+    const extraSalvati = localStorage.getItem('prodotti_extra');
+    if (extraSalvati) {
+        prodottiExtra = JSON.parse(extraSalvati);
+        // Rigenera i tasti per ogni prodotto salvato
+        prodottiExtra.forEach(prod => {
+            creaTastoProdotto(prod.nome, prod.prezzo, prod.categoria);
+        });
+    }
+    
+    // Recupera l'ordine in corso (se c'era)
+    const ordineSospeso = localStorage.getItem('ordine_corrente');
+    if (ordineSospeso) {
+        carrello = JSON.parse(ordineSospeso);
+        aggiornaInterfacciaCarrello(); 
+    }
+
+    mostraCategoria('bevande'); 
+};
 
  if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
