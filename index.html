@@ -10,7 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2c3e50">
     <style>
-<style>
         /* --- STILI INTERFACCIA --- */
         body { font-family: Arial, sans-serif; background-color: #2c3e50; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         .menu-categorie { display: flex; background-color: #34495e; padding: 10px; gap: 5px; overflow-x: auto; border-bottom: 2px solid #1a252f; }
@@ -40,6 +39,9 @@
 </head>
 <body>
 
+<div id="barra-spostamento" style="display:none; background:#2ecc71; color:white; padding:15px; text-align:center; font-weight:bold; position:sticky; top:0; z-index:100; cursor:pointer;" onclick="disattivaSpostamento()">
+    MODALITÀ SPOSTAMENTO ATTIVA - TOCCA DUE PRODOTTI PER SCAMBIARLI (CLICCA QUI PER FINIRE)
+</div>
     <div id="custom-menu" style="display:none; position:fixed; background:#fff; color:#333; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3); z-index:1000; width:180px; overflow:hidden;">
         <div onclick="menuModificaTesto()" style="padding:12px; border-bottom:1px solid #eee; cursor:pointer;">✏️ Modifica Testo/Prezzo</div>
         <div onclick="mostraPaletteColori()" style="padding:12px; border-bottom:1px solid #eee; cursor:pointer;">🎨 Cambia Colore</div>
@@ -224,23 +226,23 @@ function mostraPaletteColori() {
 function attivaSpostamento() {
     modalitaSpostamento = true; 
     document.getElementById('custom-menu').style.display = 'none'; 
-    
-    // Creiamo un tasto di conferma flottante se non esiste già
-    if (!document.getElementById('btn-conferma-sposta')) {
-        const btnConferma = document.createElement('button');
-        btnConferma.id = 'btn-conferma-sposta';
-        btnConferma.innerText = '✅ Fine Spostamento';
-        btnConferma.style = "position:fixed; bottom:20px; right:20px; z-index:2000; padding:15px 25px; background:#2ecc71; color:white; border:none; border-radius:50px; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.4);";
-        
-        btnConferma.onclick = () => {
-            modalitaSpostamento = false;
-            btnConferma.remove();
-            mostraCategoria(catAttuale); // Ritorna alla visualizzazione normale
-        };
-        document.body.appendChild(btnConferma);
-    }
-    
+    document.getElementById('barra-spostamento').style.display = 'block'; // Mostra la barra
     mostraCategoria(catAttuale);
+}
+
+function disattivaSpostamento() {
+    modalitaSpostamento = false;
+    indicePrimoElemento = null;
+    document.getElementById('barra-spostamento').style.display = 'none'; // Nasconde la barra
+    mostraCategoria(catAttuale);
+}
+function menuEliminaArticolo() {
+    if (confirm(`Vuoi eliminare definitivamente ${articoloInModifica.nome}?`)) {
+        prodottiExtra = prodottiExtra.filter(p => p !== articoloInModifica);
+        salvaSuDisco();
+        mostraCategoria(catAttuale);
+    }
+    document.getElementById('custom-menu').style.display = 'none';
 }
     function stampaCucina(nomeTavolo, articoli) {
         let testo = "\n" + MARGINE_STAMPA + "--- ORDINE CUCINA ---\n";
@@ -301,8 +303,8 @@ function attivaSpostamento() {
 
     // --- LOGICA INTERFACCIA (Invariata) ---
     function digita(v) { buffer += v; aggiornaDisplay(); }
-function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
-function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
+    function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
+    function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
 
     function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
         let qta = 1, prezzoFinale = prezzoBase;
@@ -361,140 +363,150 @@ function modificaArticolo(prodotto) {
 let timerPressione;
 let modalitaSpostamento = false; // <-- Nuova variabile per gestire lo stato
 
-// Correzione Funzione Mostra Categoria
+let indicePrimoElemento = null; 
+
 function mostraCategoria(cat) {
     catAttuale = cat.toLowerCase().trim();
     const griglia = document.getElementById('griglia-prodotti'); 
     if(!griglia) return;
     griglia.innerHTML = '';
 
-    // Uniamo i prodotti caricati dal file JS esterno con quelli aggiunti a mano
-    const tuttiIProdotti = [...(typeof prodotti !== 'undefined' ? prodotti : []), ...prodottiExtra];
-    const filtrati = tuttiIProdotti.filter(p => p.cat.toLowerCase() === catAttuale);
+    // --- AGGIUNTA: Tasto per uscire dallo spostamento ---
+    if (modalitaSpostamento) {
+        const btnFine = document.createElement('button');
+        btnFine.className = 'prodotto';
+        btnFine.style.backgroundColor = '#2ecc71'; // Verde
+        btnFine.innerHTML = '<b>FINITO ✅</b><br><small>Salva ordine</small>';
+        btnFine.onclick = () => {
+            modalitaSpostamento = false;
+            indicePrimoElemento = null;
+            mostraCategoria(catAttuale);
+        };
+        griglia.appendChild(btnFine);
+    }
+  
+
+   
+
+    const filtrati = prodottiExtra.filter(p => p.cat.toLowerCase() === catAttuale);
 
     filtrati.forEach((p) => {
         const btn = document.createElement('button'); 
         btn.className = 'prodotto';
         btn.style.backgroundColor = getColoreCSS(p.colore);
+        
+        // --- BLOCCO COMPORTAMENTI NATIVI DEL TABLET (Lente, selezione testo) ---
         btn.style.userSelect = "none";
         btn.style.webkitUserSelect = "none";
+        btn.style.webkitTouchCallout = "none";
 
+        // Imposta il trascinamento SOLO se abbiamo cliccato "Sposta"
         if (modalitaSpostamento) {
-            btn.style.border = "3px dashed white";
-            btn.style.animation = "shake 0.5s infinite";
-            // Logica Drag & Drop semplificata per tablet qui...
+            btn.setAttribute('draggable', true);
+            btn.style.border = "3px dashed rgba(255,255,255,0.7)";
+        } else {
+            btn.setAttribute('draggable', false);
         }
 
-        // Gestione Click e Pressione Lunga
+btn.onclick = () => {
+    if(modalitaSpostamento) {
+        if (indicePrimoElemento === null) {
+            indicePrimoElemento = index; 
+            mostraCategoria(catAttuale); 
+        } else {
+            // Logica di scambio (rimane identica a prima)
+            const oggettoDa = filtrati[indicePrimoElemento];
+            const oggettoA = filtrati[index];
+            const daIndexVero = prodottiExtra.indexOf(oggettoDa);
+            const aIndexVero = prodottiExtra.indexOf(oggettoA);
+            
+            const temp = prodottiExtra[daIndexVero];
+            prodottiExtra[daIndexVero] = prodottiExtra[aIndexVero];
+            prodottiExtra[aIndexVero] = temp;
+
+            indicePrimoElemento = null; 
+            salvaSuDisco();
+            mostraCategoria(catAttuale); 
+            // NOTA: Non disattiviamo la modalità qui, resta attiva!
+        }
+    } else {
+        aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
+    }
+};
+
+        // --- NUOVA GESTIONE PRESSIONE LUNGA A PROVA DI TABLET ---
         let toccoInMovimento = false;
+
         btn.ontouchstart = (e) => {
             if(modalitaSpostamento) return;
             toccoInMovimento = false;
+            
+            // Salviamo subito le coordinate X e Y del tocco
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
+            
             timerPressione = setTimeout(() => {
-                if(!toccoInMovimento) apriMenuContestuale(x, y, p);
-            }, 600);
+                if(!toccoInMovimento) {
+                    apriMenuContestuale(x, y, p); // Passiamo le coordinate esatte
+                }
+            }, 600); // 600 millisecondi di pressione
         };
 
-        btn.ontouchmove = () => { toccoInMovimento = true; clearTimeout(timerPressione); };
-        btn.ontouchend = () => {
-            clearTimeout(timerPressione);
-            if(!toccoInMovimento && !modalitaSpostamento) {
-                aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-            }
+        btn.ontouchmove = () => { 
+            toccoInMovimento = true; // Se il dito scivola, capiamo che non è una pressione lunga
+            clearTimeout(timerPressione); 
         };
-
-        // Per PC
-        btn.onclick = () => { if(!modalitaSpostamento) aggiungiAOrdine(p.nome, p.prezzo, p.reparto); };
+        
+        btn.ontouchend = () => clearTimeout(timerPressione);
+        
+        // Per il PC
         btn.oncontextmenu = (e) => {
             e.preventDefault();
-            apriMenuContestuale(e.clientX, e.clientY, p);
+            if(!modalitaSpostamento) apriMenuContestuale(e.clientX, e.clientY, p);
         };
 
-        btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
-        griglia.appendChild(btn);
-    });
-}
-  
-function mostraCategoria(cat) {
-    catAttuale = cat.toLowerCase().trim();
-    const griglia = document.getElementById('griglia-prodotti'); 
-    if(!griglia) return;
-    griglia.innerHTML = '';
-
-    const tuttiIProdotti = [...(typeof prodotti !== 'undefined' ? prodotti : []), ...prodottiExtra];
-    const filtrati = tuttiIProdotti.filter(p => p.cat.toLowerCase() === catAttuale);
-
-    filtrati.forEach((p, index) => {
-        const btn = document.createElement('button'); 
-        btn.className = 'prodotto';
-        btn.style.backgroundColor = getColoreCSS(p.colore);
+        // --- DRAG & DROP ---
+        btn.ondragstart = (e) => { e.dataTransfer.setData('text/plain', prodottiExtra.indexOf(p)); };
+        btn.ondragover = (e) => e.preventDefault();
         
-        // ATTENZIONE: Abilita il drag solo in modalità spostamento
-        if (modalitaSpostamento) {
-            btn.draggable = true;
-            btn.classList.add('shaking'); // Aggiungi una classe CSS per feedback visivo
-            btn.style.border = "2px dashed white";
-        }
-
-        // --- GESTIONE DRAG & DROP (MOUSE/PC) ---
-        btn.ondragstart = (e) => {
-            e.dataTransfer.setData('text/plain', index);
-            btn.style.opacity = "0.4";
-        };
-
-        btn.ondragend = () => { btn.style.opacity = "1"; };
-
-        btn.ondragover = (e) => { e.preventDefault(); }; // Necessario per permettere il drop
-
         btn.ondrop = (e) => {
             e.preventDefault();
-            const daIndex = e.dataTransfer.getData('text/plain');
-            const aIndex = index;
-            scambiaElementi(daIndex, aIndex);
-        };
-
-        // --- GESTIONE TOUCH (TABLET) ---
-        // Se il tablet non supporta il drag nativo, usiamo un trucco:
-        // Cliccando un elemento e poi un altro in modalità spostamento, si scambiano.
-        btn.onclick = () => {
-            if (modalitaSpostamento) {
-                gestisciScambioTouch(index);
-            } else {
-                aggiungiAOrdine(p.nome, p.prezzo, p.reparto);
-            }
+            if (!modalitaSpostamento) return; 
+            
+            const daIndexVero = parseInt(e.dataTransfer.getData('text/plain'));
+            const aIndexVero = prodottiExtra.indexOf(p);
+            
+            // Spostamento nell'array
+            const el = prodottiExtra.splice(daIndexVero, 1)[0];
+            prodottiExtra.splice(aIndexVero, 0, el);
+            
+            // NON settiamo modalitaSpostamento = false qui!
+            salvaSuDisco();
+            mostraCategoria(catAttuale);
         };
 
         btn.innerHTML = `<span>${p.nome}</span><small>${p.prezzo.toFixed(2)}€</small>`;
         griglia.appendChild(btn);
     });
-}
-let indicePrimoElemento = null;
-
-function gestisciScambioTouch(index) {
-    if (indicePrimoElemento === null) {
-        // Primo click: evidenzia il prodotto
-        indicePrimoElemento = index;
-        const pulsanti = document.querySelectorAll('.prodotto');
-        pulsanti[index].style.outline = "4px solid #f1c40f";
-        pulsanti[index].style.zIndex = "1000";
-    } else {
-        // Secondo click: esegui lo scambio
-        scambiaElementi(indicePrimoElemento, index);
-        indicePrimoElemento = null; // Reset
-    }
 }
 function apriMenuContestuale(x, y, prodotto) {
     articoloInModifica = prodotto;
     const menu = document.getElementById('custom-menu');
+    
     menu.style.left = x + "px";
     menu.style.top = y + "px";
     menu.style.display = "block";
 
+    // Impediamo che il click sul menu stesso lo chiuda accidentalmente
+    menu.onclick = (e) => {
+        e.stopPropagation();
+    };
+
+    // Chiudi se clicchi fuori (usiamo un timeout per evitare conflitti col tocco)
     setTimeout(() => {
         const chiudiMenu = () => {
             menu.style.display = "none";
+            document.getElementById('palette-colori').style.display = "none";
             document.removeEventListener('click', chiudiMenu);
         };
         document.addEventListener('click', chiudiMenu);
