@@ -364,12 +364,12 @@ function aggiungiNuovoArticoloListino() {
     const nome = prompt("Nome Dessert:"); 
     if(!nome) return;
     
-    const prezzoInput = prompt("Prezzo:", "0.00");
+    const prezzoInput = prompt("Prezzo:", "0");
     if(prezzoInput === null) return;
     const prezzo = parseFloat(prezzoInput.replace(',', '.'));
 
     // Suggerisce la categoria in cui ti trovi (es. dessert)
-    let cat = prompt("Categoria (bevande, vini, dessert...):", catAttuale); 
+    let cat = prompt("Categoria (bevande, vini, dessert, camere...):", catAttuale); 
     if(!cat) return;
     cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
 
