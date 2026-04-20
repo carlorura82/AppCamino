@@ -371,7 +371,19 @@ function mostraCategoria(cat) {
     if(!griglia) return;
     griglia.innerHTML = '';
 
-    
+    // --- AGGIUNTA: Tasto per uscire dallo spostamento ---
+    if (modalitaSpostamento) {
+        const btnFine = document.createElement('button');
+        btnFine.className = 'prodotto';
+        btnFine.style.backgroundColor = '#2ecc71'; // Verde
+        btnFine.innerHTML = '<b>FINITO ✅</b><br><small>Salva ordine</small>';
+        btnFine.onclick = () => {
+            modalitaSpostamento = false;
+            indicePrimoElemento = null;
+            mostraCategoria(catAttuale);
+        };
+        griglia.appendChild(btnFine);
+    }
   
 
    
