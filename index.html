@@ -337,7 +337,7 @@
     }
 
     function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
-   function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
+    function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; }
 
     function emettiProforma() {
         if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
@@ -361,38 +361,28 @@
     }
 
 function aggiungiNuovoArticoloListino() {
-    const nome = prompt("Nome Articolo:"); 
+    const nome = prompt("Nome Dessert:"); 
     if(!nome) return;
     
     const prezzoInput = prompt("Prezzo:", "0");
     if(prezzoInput === null) return;
     const prezzo = parseFloat(prezzoInput.replace(',', '.'));
 
+    // Suggerisce la categoria in cui ti trovi (es. dessert)
     let cat = prompt("Categoria (bevande, vini, dessert, camere...):", catAttuale); 
     if(!cat) return;
-    cat = cat.toLowerCase().trim();
+    cat = cat.toLowerCase().trim(); // Rende tutto minuscolo e toglie spazi
 
-    // 1. CREIAMO L'OGGETTO PRODOTTO
-    const nuovoProdotto = { 
+    prodottiExtra.push({ 
         nome: nome, 
         prezzo: prezzo, 
         cat: cat, 
         reparto: 'RIST', 
-        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') 
-    };
+        colore: (cat === 'dessert' ? 'giallo' : 'azzurro') // Colore specifico per dessert
+    });
 
-    // 2. AGGIUNGIAMO ALL'ARRAY IN MEMORIA RAM
-    prodottiExtra.push(nuovoProdotto);
-
-    // 3. SALVIAMO NEL TABLET (LocalStorage)
-    // Trasformiamo l'intero elenco in una stringa e lo salviamo
-    localStorage.setItem('prodotti_extra', JSON.stringify(prodottiExtra));
-
-    // 4. AGGIORNIAMO LA VISTA
-    // Ricarica la categoria attuale per far apparire subito il nuovo tasto
-    mostraCategoria(catAttuale); 
-    
-    alert("Articolo salvato correttamente!");
+    salvaSuDisco(); 
+    mostraCategoria(cat); 
 }
     function richiama(id) {
         const idx = ordiniArchiviati.findIndex(o => o.id === id);
@@ -489,21 +479,24 @@ function mostraDettaglio(nome) {
         aggiornaMappa();
         alert("Proforma Unificato inviato a Raw BT");
     }
-window.onload = () => {
-    // 1. Recupera i prodotti extra (+Voce)
+   window.onload = () => {
+    // Recupera i prodotti extra salvati
     const extraSalvati = localStorage.getItem('prodotti_extra');
     if (extraSalvati) {
         prodottiExtra = JSON.parse(extraSalvati);
+        // Rigenera i tasti per ogni prodotto salvato
+        prodottiExtra.forEach(prod => {
+            creaTastoProdotto(prod.nome, prod.prezzo, prod.categoria);
+        });
     }
     
-    // 2. Recupera l'ordine che stavi scrivendo a destra
+    // Recupera l'ordine in corso (se c'era)
     const ordineSospeso = localStorage.getItem('ordine_corrente');
     if (ordineSospeso) {
-        articoliInCorso = JSON.parse(ordineSospeso);
-        renderingOrdine(); // Ridisegna la lista a destra
+        carrello = JSON.parse(ordineSospeso);
+        aggiornaInterfacciaCarrello(); 
     }
 
-    // 3. Mostra la categoria iniziale
     mostraCategoria('bevande'); 
 };
 
