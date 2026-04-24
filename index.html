@@ -153,6 +153,7 @@ ascoltaTavoliDalCloud();
             <div class="tastierino-container">
                 <div class="griglia-tasti" style="display:grid; grid-template-columns: 1fr; gap:4px">
                     <button class="btn-pos blue" onclick="apriTavoli('selezione')">Tavoli</button>
+<button class="btn-pos orange" onclick="toggleVocale()" id="btn-microfono">🎤 Vocale</button>
                     <button class="btn-pos teal" onclick="aggiungiNuovoArticoloListino()">+ Voce</button>
                     <button class="btn-pos blue" onclick="strumentiRecupero()">Strumenti</button>
                     <button class="btn-pos red" onclick="chiusura()" style="background-color: #7f8c8d;">Chiusura</button>
@@ -844,6 +845,140 @@ function aggiungiNuovoArticoloListino() {
         aggiornaMappa();
         alert("Proforma Totale emesso. Tavolo sbloccato.");
     });
+}
+
+// --- FUNZIONE SUPER AI VOCALE ---
+// --- CONFIGURAZIONE E STATO VOCALE ---
+let recognition;
+let isListening = false;
+
+function inizializzaVocale() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert("Il tuo browser non supporta il riconoscimento vocale.");
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'it-IT';
+    recognition.continuous = true; // Fondamentale: permette di dettare più articoli di seguito
+    recognition.interimResults = false; // Elabora solo quando rileva una pausa (fine frase)
+
+    recognition.onstart = () => {
+        isListening = true;
+        const btnMic = document.getElementById('btn-microfono');
+        btnMic.style.background = "red";
+        btnMic.innerText = "🎤 ASCOLTO...";
+    };
+
+    recognition.onresult = (event) => {
+        // Prendiamo l'ultima frase dettata dopo la pausa
+        const lastResultIndex = event.results.length - 1;
+        const dettato = event.results[lastResultIndex][0].transcript.toLowerCase().trim();
+        
+        console.log("AI ha sentito: ", dettato);
+        elaboraDettatoIntelligente(dettato);
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Errore vocale:", event.error);
+        if(event.error === 'not-allowed') alert("Permesso microfono negato!");
+    };
+
+    recognition.onend = () => {
+        // Se si spegne per inattività ma isListening è true, lo riavviamo automaticamente
+        if (isListening) recognition.start();
+    };
+}
+
+function toggleVocale() {
+    if (!recognition) inizializzaVocale();
+
+    if (!isListening) {
+        recognition.start();
+    } else {
+        isListening = false;
+        recognition.stop();
+        const btnMic = document.getElementById('btn-microfono');
+        btnMic.style.background = "#f39c12";
+        btnMic.innerText = "🎤 Vocale";
+    }
+}
+
+// Dizionario dei sinonimi per correggere l'AI al volo
+const sinonimiMenu = {
+    "spriz": "spritz",
+    "sprizza": "spritz",
+    "radler": "radler",
+    "weisber": "weissbier",
+    "weisbier": "weissbier",
+    "weisse": "weissbier",
+    
+};
+
+function elaboraDettatoIntelligente(testo) {
+    let testoProcessato = testo.toLowerCase().trim();
+    
+    // --- 1. CORREZIONE SINONIMI ---
+    for (let errore in sinonimiMenu) {
+        testoProcessato = testoProcessato.replace(errore, sinonimiMenu[errore]);
+    }
+
+    // --- 2. ESTRAZIONE MOLTIPLICATORE (Migliorata) ---
+    const numeriMappa = { "un": 1, "una": 1, "uno": 1, "due": 2, "tre": 3, "quattro": 4, "cinque": 5, "sei": 6, "sette": 7, "otto": 8, "nove": 9, "dieci": 10 };
+    
+    let qta = 1;
+    let parole = testoProcessato.split(" ");
+    let primaParola = parole[0];
+
+    if (!isNaN(parseInt(primaParola))) {
+        qta = parseInt(primaParola);
+        testoProcessato = parole.slice(1).join(" ");
+    } else if (numeriMappa[primaParola]) {
+        qta = numeriMappa[primaParola];
+        testoProcessato = parole.slice(1).join(" ");
+    }
+
+    // --- 3. FUZZY MATCHING ---
+    let migliorMatch = null;
+    let punteggioMassimo = 0;
+
+    prodottiExtra.forEach(prodotto => {
+        const punteggio = calcolaSomiglianza(testoProcessato, prodotto.nome.toLowerCase());
+        if (punteggio > punteggioMassimo) {
+            punteggioMassimo = punteggio;
+            migliorMatch = prodotto;
+        }
+    });
+
+    // --- 4. AGGIUNTA DIRETTA (Senza passare dal buffer) ---
+    if (migliorMatch && punteggioMassimo > 0.40) {
+        // Creiamo l'oggetto articolo esattamente come farebbe aggiungiAOrdine
+        // ma iniettiamo la QTA rilevata dall'AI
+        const nuovoArticolo = { 
+            id: Date.now() + Math.random(), 
+            nome: migliorMatch.nome, 
+            prezzo: migliorMatch.prezzo, 
+            qta: qta, 
+            reparto: migliorMatch.reparto || 'RIST'
+        };
+        
+        articoliInCorso.push(nuovoArticolo);
+        renderingOrdine();
+        localStorage.setItem('ordine_corrente', JSON.stringify(articoliInCorso));
+        
+        console.log(`✅ AI: ${qta} x ${migliorMatch.nome} (Match: ${Math.round(punteggioMassimo*100)}%)`);
+    } else {
+        console.warn("❌ Non capito: " + testoProcessato);
+    }
+}
+// L'algoritmo di somiglianza rimane lo stesso, è molto efficace per i tuoi articoli simili
+function calcolaSomiglianza(str1, str2) {
+    const s1 = str1.replace(/\s/g, "");
+    const s2 = str2.replace(/\s/g, "");
+    let count = 0;
+    for (let i = 0; i < s1.length - 1; i++) {
+        const bigram = s1.substring(i, i + 2);
+        if (s2.includes(bigram)) count++;
+    }
+    return (2 * count) / (s1.length + s2.length);
 }
   window.onload = () => {
     // 1. Recupera i prodotti extra (+Voce)
