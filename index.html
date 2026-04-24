@@ -593,24 +593,123 @@ function mostraCategoria(cat) {
     }
 }
 
-    function mostraDettaglio(nome) {
-        document.getElementById('area-mappa').style.display = 'none';
-        document.getElementById('lista-scontrini-tavolo').style.display = 'block';
-        document.getElementById('nome-tavolo-dettaglio').innerText = nome;
-        const corpo = document.getElementById('corpo-scontrini');
-        corpo.innerHTML = "";
-        const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
+
+  function mostraDettaglio(nome) {
+    document.getElementById('area-mappa').style.display = 'none';
+    document.getElementById('lista-scontrini-tavolo').style.display = 'block';
+    document.getElementById('nome-tavolo-dettaglio').innerText = nome;
+    
+    const corpo = document.getElementById('corpo-scontrini');
+    corpo.innerHTML = "";
+    
+    const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
+
+    // --- 1. BOTTONE STAMPA PROFORMA TOTALE (Aggiunto di nuovo) ---
+    if (ordini.length > 1) {
+        const btnU = document.createElement('button');
+        btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
+        btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer; font-weight:bold; font-size:16px;";
+        btnU.onclick = () => emettiProformaUnificato(nome);
+        corpo.appendChild(btnU);
+    }
+
+    // --- 2. ELENCO DEGLI ORDINI ESISTENTI ---
+    if (ordini.length > 0) {
         ordini.forEach(o => {
             const div = document.createElement('div');
-            div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333";
-            div.innerHTML = `<span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
+            div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333; border-left: 5px solid #3498db;";
+            div.innerHTML = `
+                <span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
                 <div>
-                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px;">Mod</button>
-                    <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:5px 10px; border-radius:3px;">Stampa</button>
+                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:8px 12px; border-radius:3px; cursor:pointer;">Mod</button>
+                    <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:8px 12px; border-radius:3px; cursor:pointer; margin-left:5px;">Stampa</button>
                 </div>`;
             corpo.appendChild(div);
         });
+    } else {
+        corpo.innerHTML = "<p style='color:#333; text-align:center;'>Nessun dato trovato.</p>";
     }
+
+    // --- 3. TASTO RESET / SBLOCCA ---
+    const btnReset = document.createElement('button');
+    btnReset.style = "width:100%; padding:15px; margin-top:20px; background:#c0392b; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;";
+    btnReset.innerText = "⚠️ RESET / SBLOCCA TAVOLO";
+    btnReset.onclick = () => resetSbloccaTavolo(nome);
+    corpo.appendChild(btnReset);
+}
+
+    function resetSbloccaTavolo(nomeTavolo) {
+    if (!confirm("Vuoi forzare lo sblocco del " + nomeTavolo + "?")) return;
+
+    // 1. Cerchiamo tutti i documenti su Firebase che hanno quel nome tavolo
+    // Questo è il metodo più sicuro se il reset "non succede"
+    db.collection("tavoli_aperti").where("tavolo", "==", nomeTavolo).get()
+    .then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            db.collection("tavoli_aperti").doc(doc.id).delete();
+        });
+        
+        // 2. Pulizia locale
+        ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
+        
+        // 3. Salvataggio e Reset Interfaccia
+        salvaSuDisco();
+        
+        // Forza il ritorno alla mappa
+        document.getElementById('area-mappa').style.display = 'block';
+        document.getElementById('lista-scontrini-tavolo').style.display = 'none';
+        
+        aggiornaMappa();
+        alert("Tavolo " + nomeTavolo + " resettato!");
+    })
+    .catch((error) => {
+        console.error("Errore durante il reset: ", error);
+        alert("Errore durante il reset cloud");
+    });
+}
+
+    function eliminaSingoloOrdine(id) {
+        if (confirm("Eliminare definitivamente questo frammento di ordine?")) {
+            // Rimuove da Firebase
+            db.collection("tavoli_aperti").doc(id.toString()).delete();
+            // Rimuove localmente
+            ordiniArchiviati = ordiniArchiviati.filter(o => o.id !== id);
+            salvaSuDisco();
+            aggiornaMappa();
+            chiudiDettaglioTavolo();
+        }
+    }
+
+    function chiudiDettaglioTavolo() {
+        document.getElementById('area-mappa').style.display = 'block';
+        document.getElementById('lista-scontrini-tavolo').style.display = 'none';
+    }
+
+    function richiama(id) {
+        const o = ordiniArchiviati.find(x => x.id === id);
+        if (o) {
+            articoliInCorso = [...o.articoli];
+            document.getElementById('tavolo-attuale').innerText = o.tavolo;
+            // Opzionale: rimuoviamo l'ordine vecchio così salvando il nuovo non facciamo doppioni
+            eliminaSingoloOrdine(id); 
+            chiudiTavoli();
+            renderingOrdine();
+        }
+    }
+
+    function svuotaOrdine() {
+        articoliInCorso = [];
+        document.getElementById('tavolo-attuale').innerText = "---";
+        localStorage.removeItem('ordine_corrente');
+        renderingOrdine();
+    }
+
+    window.onload = () => {
+        caricaArticoliDalCloud();
+        ascoltaTavoliDalCloud();
+        mostraCategoria('bevande');
+    };
+
 
     function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
     function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; localStorage.removeItem('ordine_corrente');
@@ -699,36 +798,7 @@ function aggiungiNuovoArticoloListino() {
             return;
         }
     }
-function mostraDettaglio(nome) {
-        document.getElementById('area-mappa').style.display = 'none';
-        document.getElementById('lista-scontrini-tavolo').style.display = 'block';
-        document.getElementById('nome-tavolo-dettaglio').innerText = nome;
-        const corpo = document.getElementById('corpo-scontrini');
-        corpo.innerHTML = "";
-        
-        const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
 
-        // --- AGGIUNTA: BOTTONE STAMPA UNIFICATA ---
-        if (ordini.length > 1) {
-            const btnU = document.createElement('button');
-            btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
-            btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer; font-weight:bold;";
-            btnU.onclick = () => emettiProformaUnificato(nome);
-            corpo.appendChild(btnU);
-        }
-        // ------------------------------------------
-
-        ordini.forEach(o => {
-            const div = document.createElement('div');
-            div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333";
-            div.innerHTML = `<span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
-                <div>
-                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px;">Mod</button>
-                    <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:5px 10px; border-radius:3px;">Stampa</button>
-                </div>`;
-            corpo.appendChild(div);
-        });
-    }
 
     // --- FUNZIONE UNIFICATA PER RAW BT ---
     function emettiProformaUnificato(nomeTavolo) {
