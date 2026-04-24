@@ -716,32 +716,40 @@ function mostraCategoria(cat) {
 }
 
     function emettiProforma() {
-        if (articoliInCorso.length === 0) return alert("Ordine vuoto!");
-        const dp = { numero: contatoreProforma, tavolo: document.getElementById('tavolo-attuale').innerText, articoli: [...articoliInCorso], totale: totaleCorrente, ora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-        stampaFinestra(dp);
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        svuotaOrdine(); salvaSuDisco(); aggiornaMappa();
-    }
+    if (articoliInCorso.length === 0) return alert("Nessun articolo nell'ordine!");
+    const nomeTavolo = document.getElementById('tavolo-attuale').innerText;
+    if (nomeTavolo === "---") return alert("Seleziona un tavolo prima!");
 
-    function stampaSingoloDaTavolo(id) {
-    const idx = ordiniArchiviati.findIndex(o => o.id === id);
-    if (idx === -1) return;
-    const o = ordiniArchiviati[idx];
-    const dp = { numero: contatoreProforma, tavolo: o.tavolo, articoli: o.articoli, totale: o.totale, ora: o.ora };
-    
+    const dp = {
+        numero: contatoreProforma,
+        tavolo: nomeTavolo,
+        ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+        articoli: [...articoliInCorso],
+        totale: totaleCorrente
+    };
+
+    // 1. Stampa
     stampaFinestra(dp);
+
+    // 2. Archivia per Recupero e Chiusura
     archivioProforma.push(dp);
     contatoreProforma++;
-    
-    // --- RIMOZIONE DAL CLOUD ---
-    db.collection("tavoli_aperti").doc(id.toString()).delete();
-    // ---------------------------
 
-    ordiniArchiviati.splice(idx, 1);
-    salvaSuDisco(); 
-    chiudiTavoli(); 
-    aggiornaMappa();
+    // 3. SBLOCCO CLOUD (Rende il tavolo verde sugli altri tablet)
+    db.collection("tavoli_aperti").where("tavolo", "==", nomeTavolo).get()
+    .then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            db.collection("tavoli_aperti").doc(doc.id).delete();
+        });
+        
+        // 4. Pulizia locale
+        ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
+        
+        svuotaOrdine();
+        salvaSuDisco();
+        aggiornaMappa();
+        alert("Proforma emesso. Tavolo sbloccato.");
+    });
 }
 
 function aggiungiNuovoArticoloListino() {
@@ -800,40 +808,43 @@ function aggiungiNuovoArticoloListino() {
     }
 
 
-    // --- FUNZIONE UNIFICATA PER RAW BT ---
+
     function emettiProformaUnificato(nomeTavolo) {
-        const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
-        let tuttiArt = []; 
-        let tot = 0;
+    const ordini = ordiniArchiviati.filter(o => o.tavolo === nomeTavolo);
+    if (ordini.length === 0) return;
 
-        ordini.forEach(o => { 
-            tuttiArt = tuttiArt.concat(o.articoli); 
-            tot += o.totale; 
+    let totaleTavolo = 0;
+    let tuttiArticoli = [];
+    ordini.forEach(o => {
+        totaleTavolo += o.totale;
+        tuttiArticoli = tuttiArticoli.concat(o.articoli);
+    });
+
+    const dp = {
+        numero: contatoreProforma,
+        tavolo: nomeTavolo,
+        ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+        articoli: tuttiArticoli,
+        totale: totaleTavolo
+    };
+
+    stampaFinestra(dp);
+    archivioProforma.push(dp);
+    contatoreProforma++;
+
+    // Sblocco Cloud
+    db.collection("tavoli_aperti").where("tavolo", "==", nomeTavolo).get()
+    .then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            db.collection("tavoli_aperti").doc(doc.id).delete();
         });
-
-        const dp = { 
-            numero: contatoreProforma, 
-            tavolo: nomeTavolo, 
-            articoli: tuttiArt, 
-            totale: tot, 
-            ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
-        };
-
-        // Invia a Raw BT
-        stampaFinestra(dp);
-        
-        // Archivia per la chiusura serale
-        archivioProforma.push(dp);
-        contatoreProforma++;
-        
-        // Rimuove tutti gli ordini separati di quel tavolo perché ora sono chiusi
         ordiniArchiviati = ordiniArchiviati.filter(o => o.tavolo !== nomeTavolo);
-        
-        salvaSuDisco(); 
-        chiudiTavoli(); 
+        salvaSuDisco();
+        chiudiTavoli();
         aggiornaMappa();
-        
-    }
+        alert("Proforma Totale emesso. Tavolo sbloccato.");
+    });
+}
   window.onload = () => {
     // 1. Recupera i prodotti extra (+Voce)
     const extraSalvati = localStorage.getItem('prodotti_extra');
