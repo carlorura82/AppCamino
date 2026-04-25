@@ -976,40 +976,51 @@ function inizializzaVocale() {
         document.getElementById('btn-microfono').innerText = "🎤 ASCOLTO...";
     };
 
-    recognition.onresult = (event) => {
-        let fraseCorrente = "";
-        
-        // Leggiamo i risultati (questo modo è più compatibile tra PC e Tablet)
-        for (let i = 0; i < event.results.length; i++) {
-            fraseCorrente += event.results[i][0].transcript;
+   recognition.onresult = (event) => {
+        let fraseIntera = "";
+        let ultimaFraseDefinitiva = "";
+
+        // Ciclo corretto per distinguere tra quello che stai dicendo e quello che è confermato
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            let trascrizione = event.results[i][0].transcript;
+            
+            // Se il tablet ha deciso che questo pezzo di frase è FINITO (isFinal)
+            if (event.results[i].isFinal) {
+                ultimaFraseDefinitiva = trascrizione;
+            } else {
+                fraseIntera += trascrizione;
+            }
         }
 
         const display = document.getElementById('display-tasti');
-        if (fraseCorrente.trim() !== '') {
-            display.innerHTML = `<span class="ai-preview" style="color: #f39c12;">... ${fraseCorrente.toLowerCase()}</span>`;
+        
+        // Se c'è qualcosa di nuovo (anche parziale), lo mostriamo in arancione
+        let testoDaMostrare = (ultimaFraseDefinitiva + fraseIntera).toLowerCase().trim();
+        
+        if (testoDaMostrare !== '') {
+            display.innerHTML = `<span class="ai-preview" style="color: #f39c12;">... ${testoDaMostrare}</span>`;
             
-            // CANCELLA IL TIMER PRECEDENTE
+            // RESETTA IL TIMER
             if (timerSilenzio) clearTimeout(timerSilenzio);
 
-            // FAI PARTIRE IL NUOVO TIMER
-            // Se 1200ms (1.2 secondi) sono troppi o pochi, cambia questo numero:
+            // FAI PARTIRE IL TIMER
             timerSilenzio = setTimeout(() => {
-                const frasePulita = fraseCorrente.toLowerCase().trim();
+                // Prendiamo il testo finale
+                const fraseDaInviare = testoDaMostrare;
                 
-                // Feedback Visivo Verde
-                display.innerHTML = `<span style="color: #2ecc71; font-weight: bold;">✅ ${frasePulita}</span>`;
+                // Feedback Verde
+                display.innerHTML = `<span style="color: #2ecc71; font-weight: bold;">✅ ${fraseDaInviare}</span>`;
                 
-                // MANDA AL CARRELLO
+                // ELABORA (una sola volta!)
                 if (typeof elaboraDettatoIntelligente === "function") {
-                    elaboraDettatoIntelligente(frasePulita);
+                    elaboraDettatoIntelligente(fraseDaInviare);
                 }
 
-                // RESET FONDAMENTALE: 
-                // Fermiamo la recognition. Il tablet svuota la memoria.
-                // La funzione onend la farà ripartire pulita.
+                // RESETTOTALE: Fermiamo tutto e svuotiamo la memoria del microfono
+                // Questo è l'unico modo per non fargli ripetere "5 5 5" alla prossima frase
                 recognition.stop(); 
                 
-            }, 1100); // <-- REGOLA QUI: 1000 = 1 secondo, 1500 = 1.5 secondi
+            }, 1000); // 1 secondo di silenzio
         }
     };
 
