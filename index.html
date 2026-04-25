@@ -971,7 +971,7 @@ function inizializzaVocale() {
     recognition.lang = 'it-IT';
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1; // FORZA IL MOBILE A ESSERE PIU VELOCE
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
         isListening = true;
@@ -981,64 +981,48 @@ function inizializzaVocale() {
             btn.innerText = "🎤 ASCOLTO...";
         }
         
-        // Feedback immediato nel display: ti dice subito che è pronto
         const display = document.getElementById('display-tasti');
         if(display) display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`;
     };
 
     recognition.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
+        let fraseCorrente = "";
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            let transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-                finalTranscript += transcript;
-            } else {
-                interimTranscript += transcript;
-            }
+        // 1. Ignoriamo se il tablet pensa che la frase sia finita o meno.
+        // Raccogliamo tutto quello che il microfono ha sentito finora in questa passata.
+        for (let i = 0; i < event.results.length; ++i) {
+            fraseCorrente += event.results[i][0].transcript;
         }
 
         const display = document.getElementById('display-tasti');
         
-        // --- ANTEPRIMA (Se il tablet decide di inviarla) ---
-        if (interimTranscript !== '') {
-            // Nota: Rimosso il display='block' che nascondeva il testo su tablet!
-            display.innerHTML = `<span class="ai-preview">... ${interimTranscript.toLowerCase()}</span>`;
+        if (fraseCorrente.trim() !== '') {
+            // 2. Mostriamo l'anteprima che si aggiorna in tempo reale
+            display.innerHTML = `<span class="ai-preview">... ${fraseCorrente.toLowerCase()}</span>`;
             display.scrollLeft = display.scrollWidth;
 
-            clearTimeout(timerSilenzio);
-            timerSilenzio = setTimeout(() => {
-                if (interimTranscript.trim() !== "") {
-                    elaboraDettatoIntelligente(interimTranscript.toLowerCase().trim());
-                    interimTranscript = "";
-                    display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`; 
+            // 3. Azzeriamo il timer perché stai ancora parlando
+            clearTimeout(timerElaborazione);
+
+            // 4. Facciamo partire il timer: se fai silenzio per 1.2 secondi, l'AI elabora.
+            timerElaborazione = setTimeout(() => {
+                const frasePulita = fraseCorrente.toLowerCase().trim();
+                display.innerHTML = `<span style="color: #2ecc71; font-weight: bold;">✅ ${frasePulita}</span>`;
+                
+                // Manda l'ordine al cervello
+                elaboraDettatoIntelligente(frasePulita);
+                
+                // 5. TRUCCO MAGICO: Spegniamo il microfono per svuotare la sua cache
+                // La funzione onend lo riaccenderà una frazione di secondo dopo, pulito e pronto!
+                if (isListening) {
+                    recognition.stop();
                 }
-            }, 1500);
-        }
+                
+                setTimeout(() => { 
+                    if(isListening) display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`; 
+                }, 1500);
 
-        // --- RISULTATO FINALE ---
-        if (finalTranscript !== '') {
-            clearTimeout(timerSilenzio);
-            const ora = Date.now();
-            const frasePulita = finalTranscript.toLowerCase().trim();
-
-            if (frasePulita === ultimaFraseElaborata && (ora - ultimoTimestamp) < 1500) return;
-
-            ultimaFraseElaborata = frasePulita;
-            ultimoTimestamp = ora;
-
-            display.innerHTML = `<span style="color: #2ecc71; font-weight: bold;">✅ ${frasePulita}</span>`;
-            elaboraDettatoIntelligente(frasePulita);
-            
-            // Dopo aver aggiunto l'articolo, torna a mostrare "Sto ascoltando..."
-            setTimeout(() => { 
-                if(isListening) {
-                    display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`;
-                } else {
-                    display.innerHTML = ""; 
-                }
-            }, 2000);
+            }, 1200); // 1.2 secondi di pausa per confermare
         }
     };
 
@@ -1047,11 +1031,13 @@ function inizializzaVocale() {
     };
 
     recognition.onend = () => {
+        // Quando il sistema "stoppa" per pulire la cache, lo riavviamo all'istante
         if (isListening) {
             try { recognition.start(); } catch(e) {}
         }
     };
-}function toggleVocale() {
+}
+function toggleVocale() {
     if (!recognition) inizializzaVocale();
     
     if (!isListening) {
