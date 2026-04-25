@@ -922,10 +922,21 @@ function aggiungiNuovoArticoloListino() {
     });
 }
 
-// --- FUNZIONE SUPER AI VOCALE ---
-// --- CONFIGURAZIONE E STATO VOCALE ---
+// --- VARIABILI DI STATO VOCALE (Metterle fuori dalle funzioni) ---
 let recognition;
 let isListening = false;
+let ultimaFraseElaborata = "";
+let ultimoTimestamp = 0;
+let timerSilenzio; // Utile per i tablet che non chiudono la frase
+
+// Dizionario sinonimi
+const sinonimiMenu = {
+    "spriz": "spritz",
+    "radler": "radler",
+    "weisber": "weissbier",
+    "mezzo litro": "0.5l",
+    "un litro": "1l"
+};
 
 function inizializzaVocale() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -934,12 +945,15 @@ function inizializzaVocale() {
     recognition = new SpeechRecognition();
     recognition.lang = 'it-IT';
     recognition.continuous = true;
-    recognition.interimResults = true; // ABILITATO: per vedere il testo mentre parli
+    recognition.interimResults = true;
 
     recognition.onstart = () => {
         isListening = true;
-        document.getElementById('btn-microfono').style.background = "red";
-        document.getElementById('btn-microfono').innerText = "🎤 ASCOLTO...";
+        const btn = document.getElementById('btn-microfono');
+        if(btn) {
+            btn.style.background = "red";
+            btn.innerText = "🎤 ASCOLTO...";
+        }
     };
 
     recognition.onresult = (event) => {
@@ -954,46 +968,70 @@ function inizializzaVocale() {
             }
         }
 
-        // MOSTRA NEL DISPLAY QUELLO CHE SENTE L'AI
         const display = document.getElementById('display-tasti');
-        if (finalTranscript !== '') {
-            display.innerHTML = `<span style="color: #2ecc71;">${finalTranscript.toLowerCase()}</span>`;
-            elaboraDettatoIntelligente(finalTranscript.toLowerCase().trim());
-        } else {
-            // Testo provvisorio mentre stai parlando
+        
+        // 1. Mostra ANTEPRIMA (mentre parli)
+        if (interimTranscript !== '') {
             display.innerHTML = `<span class="ai-preview">... ${interimTranscript.toLowerCase()}</span>`;
+            
+            // Trucco per Tablet Android: se non arriva il segnale "Final", elabora dopo 1.2 secondi di silenzio
+            clearTimeout(timerSilenzio);
+            timerSilenzio = setTimeout(() => {
+                if (interimTranscript.trim() !== "") {
+                    elaboraDettatoIntelligente(interimTranscript.toLowerCase().trim());
+                    interimTranscript = ""; // Svuota per non duplicare
+                }
+            }, 1200);
+        }
+
+        // 2. Elabora RISULTATO FINALE (quando fai una pausa)
+        if (finalTranscript !== '') {
+            clearTimeout(timerSilenzio); // Cancella il timer di emergenza
+            const ora = Date.now();
+            const frasePulita = finalTranscript.toLowerCase().trim();
+
+            // Protezione duplicati (Tablet/Mobile)
+            if (frasePulita === ultimaFraseElaborata && (ora - ultimoTimestamp) < 1500) {
+                return; 
+            }
+
+            ultimaFraseElaborata = frasePulita;
+            ultimoTimestamp = ora;
+
+            display.innerHTML = `<span style="color: #2ecc71;">${frasePulita}</span>`;
+            elaboraDettatoIntelligente(frasePulita);
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.log("Errore vocale:", event.error);
+        if (event.error === 'no-speech' && isListening) {
+            // Non fare nulla, il restart è gestito da onend
         }
     };
 
     recognition.onend = () => {
-        if (isListening) recognition.start();
+        if (isListening) {
+            try { recognition.start(); } catch(e) {}
+        }
     };
 }
+
 function toggleVocale() {
     if (!recognition) inizializzaVocale();
-
+    
     if (!isListening) {
         recognition.start();
     } else {
         isListening = false;
         recognition.stop();
-        const btnMic = document.getElementById('btn-microfono');
-        btnMic.style.background = "#f39c12";
-        btnMic.innerText = "🎤 Vocale";
+        const btn = document.getElementById('btn-microfono');
+        if(btn) {
+            btn.style.background = "#f39c12";
+            btn.innerText = "🎤 Vocale";
+        }
     }
 }
-
-// Dizionario dei sinonimi per correggere l'AI al volo
-const sinonimiMenu = {
-    "spriz": "spritz",
-    "sprizza": "spritz",
-    "radler": "radler",
-    "weisber": "weissbier",
-    "weisbier": "weissbier",
-    "weisse": "weissbier",
-    
-};
-
 function elaboraDettatoIntelligente(testo) {
     let testoProcessato = testo.toLowerCase().trim();
     
