@@ -969,73 +969,79 @@ function inizializzaVocale() {
     recognition.lang = 'it-IT';
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
         isListening = true;
-        const btn = document.getElementById('btn-microfono');
-        if(btn) {
-            btn.style.background = "red";
-            btn.innerText = "🎤 ASCOLTO...";
-        }
-        const display = document.getElementById('display-tasti');
-        if(display) display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`;
+        document.getElementById('btn-microfono').style.background = "red";
+        document.getElementById('btn-microfono').innerText = "🎤 ASCOLTO...";
     };
 
     recognition.onresult = (event) => {
         let fraseCorrente = "";
         
-        // Recupera tutto il testo detto finora
-        for (let i = 0; i < event.results.length; ++i) {
+        // Leggiamo i risultati (questo modo è più compatibile tra PC e Tablet)
+        for (let i = 0; i < event.results.length; i++) {
             fraseCorrente += event.results[i][0].transcript;
         }
 
         const display = document.getElementById('display-tasti');
-        
         if (fraseCorrente.trim() !== '') {
-            // Mostra anteprima arancione
-            display.innerHTML = `<span class="ai-preview">... ${fraseCorrente.toLowerCase()}</span>`;
+            display.innerHTML = `<span class="ai-preview" style="color: #f39c12;">... ${fraseCorrente.toLowerCase()}</span>`;
             
-            // RESETTA IL TIMER (Qui c'era l'errore di nome!)
-            clearTimeout(timerSilenzio);
+            // CANCELLA IL TIMER PRECEDENTE
+            if (timerSilenzio) clearTimeout(timerSilenzio);
 
-            // FAI PARTIRE IL TIMER DI CONFERMA
+            // FAI PARTIRE IL NUOVO TIMER
+            // Se 1200ms (1.2 secondi) sono troppi o pochi, cambia questo numero:
             timerSilenzio = setTimeout(() => {
                 const frasePulita = fraseCorrente.toLowerCase().trim();
                 
-                // 1. Mostra conferma verde
+                // Feedback Visivo Verde
                 display.innerHTML = `<span style="color: #2ecc71; font-weight: bold;">✅ ${frasePulita}</span>`;
                 
-                // 2. ELABORA IL PRODOTTO
+                // MANDA AL CARRELLO
                 if (typeof elaboraDettatoIntelligente === "function") {
                     elaboraDettatoIntelligente(frasePulita);
                 }
 
-                // 3. REBOOT DEL MICROFONO (Svuota la cache del tablet)
-                // Questo evita che alla prossima frase si tiri dietro quella vecchia
+                // RESET FONDAMENTALE: 
+                // Fermiamo la recognition. Il tablet svuota la memoria.
+                // La funzione onend la farà ripartire pulita.
                 recognition.stop(); 
                 
-                setTimeout(() => {
-                   if(isListening) display.innerHTML = `<span class="ai-preview">Attendere...</span>`;
-                }, 1000);
-
-            }, 1200); // Aspetta 1.2 secondi di silenzio prima di inviare
+            }, 1100); // <-- REGOLA QUI: 1000 = 1 secondo, 1500 = 1.5 secondi
         }
-    };
-
-    recognition.onerror = (event) => {
-        console.log("Errore vocale:", event.error);
-        if(event.error === 'no-speech') restartRecognition();
     };
 
     recognition.onend = () => {
-        // Se l'ascolto è ancora attivo, riavvialo subito (pulito)
+        // Se isListening è vero, vuol dire che non abbiamo premuto il tasto STOP
+        // ma è stato il timer a fermarlo per pulizia. Lo riavviamo.
         if (isListening) {
-            restartRecognition();
+            setTimeout(() => {
+                try { recognition.start(); } catch(e) {}
+            }, 200); 
         }
+    };
+
+    recognition.onerror = (e) => {
+        if(e.error === 'no-speech') return; // Ignora se non parli
+        console.error("Errore:", e.error);
     };
 }
 
+function toggleVocale() {
+    if (!recognition) inizializzaVocale();
+    
+    if (!isListening) {
+        recognition.start();
+    } else {
+        isListening = false; // Fermiamo tutto definitivamente
+        if (timerSilenzio) clearTimeout(timerSilenzio);
+        recognition.stop();
+        document.getElementById('btn-microfono').style.background = "#f39c12";
+        document.getElementById('btn-microfono').innerText = "🎤 Vocale";
+    }
+}
 function restartRecognition() {
     try {
         recognition.start();
