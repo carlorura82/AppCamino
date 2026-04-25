@@ -85,7 +85,22 @@ ascoltaTavoliDalCloud();
         .btn-tavolo.occupato { background: #c0392b !important; border: 2px solid white; }
         .btn-tavolo.camera-style { background: #8e44ad; }
         .area-laterale { flex: 0.8; background-color: #ecf0f1; color: #333; padding: 15px; display: flex; flex-direction: column; }
-        #lista-ordine { flex: 1; overflow-y: auto; margin-bottom: 10px; }
+        #lista-ordine {
+    flex: 1;
+    height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    scroll-behavior: smooth;
+    border: 1px solid #ddd; /* Opzionale: per vedere i bordi della lista */
+}
+/* Stile per il testo che l'AI sta sentendo (provvisorio) */
+.ai-preview {
+    color: #f39c12;
+    font-style: italic;
+    font-size: 0.9rem;
+}
         .riga-item { display: flex; justify-content: space-between; padding: 12px 8px; border-bottom: 1px dashed #ccc; cursor: pointer; }
         .riga-item.selezionata { background-color: #3498db !important; color: white; border-radius: 5px; }
         .display-tastierino { background: #111; color: #2ecc71; padding: 10px; text-align: right; font-family: monospace; font-size: 1.5rem; border-top: 2px solid #444; min-height: 30px; }
@@ -395,21 +410,38 @@ function menuEliminaArticolo() {
     localStorage.setItem('ordine_corrente', JSON.stringify(articoliInCorso));
 }
 
-    function renderingOrdine() {
-        const lista = document.getElementById('lista-ordine');
-        if(!lista) return;
-        lista.innerHTML = ""; totaleCorrente = 0;
-        articoliInCorso.forEach(item => {
-            const subTot = item.qta * item.prezzo;
-            const div = document.createElement('div');
-            div.className = `riga-item ${idRigaSelezionata === item.id ? 'selezionata' : ''}`;
-            div.onclick = () => { idRigaSelezionata = (idRigaSelezionata === item.id) ? null : item.id; renderingOrdine(); };
-            div.innerHTML = `<span>${item.qta} x ${item.nome}</span><b>${subTot.toFixed(2)} €</b>`;
-            lista.appendChild(div);
-            totaleCorrente += subTot;
-        });
-        document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
-    }
+function renderingOrdine() {
+    const lista = document.getElementById('lista-ordine');
+    if(!lista) return;
+    
+    lista.innerHTML = ""; 
+    totaleCorrente = 0;
+    
+    articoliInCorso.forEach(item => {
+        const subTot = item.qta * item.prezzo;
+        const div = document.createElement('div');
+        div.className = `riga-item ${idRigaSelezionata === item.id ? 'selezionata' : ''}`;
+        
+        // Mantieni la tua logica di selezione
+        div.onclick = () => { 
+            idRigaSelezionata = (idRigaSelezionata === item.id) ? null : item.id; 
+            renderingOrdine(); 
+        };
+
+        div.innerHTML = `<span>${item.qta} x ${item.nome}</span><b>${subTot.toFixed(2)} €</b>`;
+        lista.appendChild(div);
+        totaleCorrente += subTot;
+    });
+
+    document.getElementById('prezzo-totale').innerText = totaleCorrente.toFixed(2) + " €";
+
+    // --- CORREZIONE SCROLL AUTOMATICO ---
+    // Usiamo setTimeout(..., 0) per forzare lo scroll alla fine del processo di rendering
+    setTimeout(() => {
+        lista.scrollTop = lista.scrollHeight;
+    }, 50); 
+}
+
 function modificaArticolo(prodotto) {
     const nuovoNome = prompt("Modifica Nome:", prodotto.nome);
     if (!nuovoNome) return;
@@ -854,40 +886,46 @@ let isListening = false;
 
 function inizializzaVocale() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return alert("Il tuo browser non supporta il riconoscimento vocale.");
+    if (!SpeechRecognition) return alert("Browser non supportato.");
 
     recognition = new SpeechRecognition();
     recognition.lang = 'it-IT';
-    recognition.continuous = true; // Fondamentale: permette di dettare più articoli di seguito
-    recognition.interimResults = false; // Elabora solo quando rileva una pausa (fine frase)
+    recognition.continuous = true;
+    recognition.interimResults = true; // ABILITATO: per vedere il testo mentre parli
 
     recognition.onstart = () => {
         isListening = true;
-        const btnMic = document.getElementById('btn-microfono');
-        btnMic.style.background = "red";
-        btnMic.innerText = "🎤 ASCOLTO...";
+        document.getElementById('btn-microfono').style.background = "red";
+        document.getElementById('btn-microfono').innerText = "🎤 ASCOLTO...";
     };
 
     recognition.onresult = (event) => {
-        // Prendiamo l'ultima frase dettata dopo la pausa
-        const lastResultIndex = event.results.length - 1;
-        const dettato = event.results[lastResultIndex][0].transcript.toLowerCase().trim();
-        
-        console.log("AI ha sentito: ", dettato);
-        elaboraDettatoIntelligente(dettato);
-    };
+        let interimTranscript = '';
+        let finalTranscript = '';
 
-    recognition.onerror = (event) => {
-        console.error("Errore vocale:", event.error);
-        if(event.error === 'not-allowed') alert("Permesso microfono negato!");
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+
+        // MOSTRA NEL DISPLAY QUELLO CHE SENTE L'AI
+        const display = document.getElementById('display-tasti');
+        if (finalTranscript !== '') {
+            display.innerHTML = `<span style="color: #2ecc71;">${finalTranscript.toLowerCase()}</span>`;
+            elaboraDettatoIntelligente(finalTranscript.toLowerCase().trim());
+        } else {
+            // Testo provvisorio mentre stai parlando
+            display.innerHTML = `<span class="ai-preview">... ${interimTranscript.toLowerCase()}</span>`;
+        }
     };
 
     recognition.onend = () => {
-        // Se si spegne per inattività ma isListening è true, lo riavviamo automaticamente
         if (isListening) recognition.start();
     };
 }
-
 function toggleVocale() {
     if (!recognition) inizializzaVocale();
 
