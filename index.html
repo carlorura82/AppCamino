@@ -101,6 +101,19 @@ ascoltaTavoliDalCloud();
     font-style: italic;
     font-size: 0.9rem;
 }
+/* Stile speciale per la riga Segue nel carrello */
+.riga-item span {
+    font-weight: normal;
+}
+
+/* Se il testo contiene 'SEGUE', lo facciamo risaltare */
+.riga-item[data-nome*="SEGUE"] {
+    background-color: #2ecc71 !important;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    border-bottom: 2px solid #27ae60;
+}
         .riga-item { display: flex; justify-content: space-between; padding: 12px 8px; border-bottom: 1px dashed #ccc; cursor: pointer; }
         .riga-item.selezionata { background-color: #3498db !important; color: white; border-radius: 5px; }
         .display-tastierino { background: #111; color: #2ecc71; padding: 10px; text-align: right; font-family: monospace; font-size: 1.5rem; border-top: 2px solid #444; min-height: 30px; }
@@ -180,13 +193,17 @@ ascoltaTavoliDalCloud();
                     <button class="btn-pos num" onclick="digita('0')">0</button><button class="btn-pos num" onclick="digita('.')">.</button><button class="btn-pos num" onclick="digita('x')">X</button>
                 </div>
                 <div class="griglia-tasti" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px">
-                    <button class="btn-pos orange" onclick="cancellaBuffer()">C</button>
-                    <button class="btn-pos blue" onclick="apriTavoli('sposta')">Sposta</button>
-                    <button class="btn-pos green" onclick="modificaQuantita(1)">+ 1</button>
-                    <button class="btn-pos red" onclick="modificaQuantita(-1)">- 1</button>
-                    <button class="btn-pos blue" onclick="emettiProforma()">Proforma</button>
-                    <button class="btn-pos red" onclick="svuotaOrdine()">Cancella</button>
-                </div>
+    <button class="btn-pos orange" onclick="cancellaBuffer()">C</button>
+    <button class="btn-pos blue" onclick="attivaVarianteVocale()">Varianti</button>
+    
+    <button class="btn-pos" style="background-color: #34495e;" id="btn-vuoto"> </button>
+    <button class="btn-pos green" onclick="aggiungiSegue()" style="background-color: #27ae60;">Segue</button>
+    
+    <button class="btn-pos green" onclick="modificaQuantita(1)">+ 1</button>
+    <button class="btn-pos red" onclick="modificaQuantita(-1)">- 1</button>
+    <button class="btn-pos blue" onclick="emettiProforma()">Proforma</button>
+    <button class="btn-pos red" onclick="svuotaOrdine()">Cancella</button>
+</div>
             </div>
         </div>
 
@@ -390,6 +407,28 @@ function menuEliminaArticolo() {
     function cancellaBuffer() { buffer = ""; aggiornaDisplay(); }
     function aggiornaDisplay() { document.getElementById('display-tasti').innerText = buffer; }
 
+function aggiungiSegue() {
+    // Creiamo un elemento separatore
+    const separatore = {
+        id: Date.now(),
+        nome: "---------- SEGUE ----------", // Questo verrà stampato chiaramente
+        prezzo: 0,
+        qta: "",
+        reparto: "LINEA", // Un reparto speciale per non influenzare i calcoli
+        isSeparatore: true // Flag utile per la formattazione
+    };
+
+    // Lo aggiungiamo alla lista articoli
+    articoliInCorso.push(separatore);
+    
+    // Aggiorniamo il carrello e facciamo scorrere in basso
+    renderingOrdine();
+    localStorage.setItem('ordine_corrente', JSON.stringify(articoliInCorso));
+    
+    // Feedback sul display
+    document.getElementById('display-tasti').innerHTML = `<span style="color: #27ae60;">Linea 'Segue' inserita</span>`;
+}
+
     function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
         let qta = 1, prezzoFinale = prezzoBase;
         if (buffer && buffer !== "") {
@@ -419,7 +458,11 @@ function renderingOrdine() {
     
     articoliInCorso.forEach(item => {
         const subTot = item.qta * item.prezzo;
-        const div = document.createElement('div');
+        // Dentro il ciclo forEach di renderingOrdine
+const div = document.createElement('div');
+div.className = `riga-item ${idRigaSelezionata === item.id ? 'selezionata' : ''}`;
+div.setAttribute('data-nome', item.nome); // Aggiungi questa riga per il CSS sopra
+div.innerHTML = `<span>${item.qta} ${item.nome}</span><b>${item.prezzo > 0 ? (item.qta * item.prezzo).toFixed(2) + ' €' : ''}</b>`;
         div.className = `riga-item ${idRigaSelezionata === item.id ? 'selezionata' : ''}`;
         
         // Mantieni la tua logica di selezione
@@ -1017,6 +1060,58 @@ function calcolaSomiglianza(str1, str2) {
         if (s2.includes(bigram)) count++;
     }
     return (2 * count) / (s1.length + s2.length);
+}
+
+function attivaVarianteVocale() {
+    // 1. Controlla se è stato selezionato un articolo nel carrello
+    if (!idRigaSelezionata) {
+        alert("Seleziona prima un articolo dal carrello a destra!");
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert("Browser non supportato.");
+
+    const recognitionVariante = new SpeechRecognition();
+    recognitionVariante.lang = 'it-IT';
+
+    recognitionVariante.onstart = () => {
+        const display = document.getElementById('display-tasti');
+        display.innerHTML = `<span style="color: #f39c12;">Dettate variante per l'articolo...</span>`;
+    };
+
+    recognitionVariante.onresult = (event) => {
+        const dettato = event.results[0][0].transcript.toLowerCase();
+        applicaVariante(dettato);
+    };
+
+    recognitionVariante.start();
+}
+
+function applicaVariante(testoVariante) {
+    // Trova l'articolo selezionato nell'array degli articoli in corso
+    const indice = articoliInCorso.findIndex(item => item.id === idRigaSelezionata);
+
+    if (indice !== -1) {
+        // Pulizia intelligente: se detti il nome del prodotto + la variante
+        // (es: "coca cola con ghiaccio"), proviamo a togliere il nome del prodotto
+        let nomeProdotto = articoliInCorso[indice].nome.toLowerCase();
+        let notaPulita = testoVariante.replace(nomeProdotto, "").trim();
+        
+        // Se la nota è vuota (hai detto solo il nome del prodotto), usiamo tutto il dettato
+        if (notaPulita === "") notaPulita = testoVariante;
+
+        // Aggiunge la variante tra parentesi
+        articoliInCorso[indice].nome += ` (${notaPulita})`;
+        
+        // Aggiorna l'interfaccia e salva
+        renderingOrdine();
+        localStorage.setItem('ordine_corrente', JSON.stringify(articoliInCorso));
+        
+        // Feedback sul display
+        document.getElementById('display-tasti').innerHTML = 
+            `<span style="color: #2ecc71;">Variante aggiunta: ${notaPulita}</span>`;
+    }
 }
   window.onload = () => {
     // 1. Recupera i prodotti extra (+Voce)
