@@ -947,12 +947,10 @@ function aggiungiNuovoArticoloListino() {
     });
 }
 
-// --- VARIABILI DI STATO VOCALE (Metterle fuori dalle funzioni) ---
+// --- VARIABILI DI STATO VOCALE ---
 let recognition;
 let isListening = false;
-let ultimaFraseElaborata = "";
-let ultimoTimestamp = 0;
-let timerSilenzio; // Utile per i tablet che non chiudono la frase
+let timerSilenzio; // Usiamo questo nome per tutto
 
 // Dizionario sinonimi
 const sinonimiMenu = {
@@ -980,16 +978,14 @@ function inizializzaVocale() {
             btn.style.background = "red";
             btn.innerText = "🎤 ASCOLTO...";
         }
-        
         const display = document.getElementById('display-tasti');
         if(display) display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`;
     };
 
     recognition.onresult = (event) => {
         let fraseCorrente = "";
-
-        // 1. Ignoriamo se il tablet pensa che la frase sia finita o meno.
-        // Raccogliamo tutto quello che il microfono ha sentito finora in questa passata.
+        
+        // Recupera tutto il testo detto finora
         for (let i = 0; i < event.results.length; ++i) {
             fraseCorrente += event.results[i][0].transcript;
         }
@@ -997,46 +993,57 @@ function inizializzaVocale() {
         const display = document.getElementById('display-tasti');
         
         if (fraseCorrente.trim() !== '') {
-            // 2. Mostriamo l'anteprima che si aggiorna in tempo reale
+            // Mostra anteprima arancione
             display.innerHTML = `<span class="ai-preview">... ${fraseCorrente.toLowerCase()}</span>`;
-            display.scrollLeft = display.scrollWidth;
+            
+            // RESETTA IL TIMER (Qui c'era l'errore di nome!)
+            clearTimeout(timerSilenzio);
 
-            // 3. Azzeriamo il timer perché stai ancora parlando
-            clearTimeout(timerElaborazione);
-
-            // 4. Facciamo partire il timer: se fai silenzio per 1.2 secondi, l'AI elabora.
-            timerElaborazione = setTimeout(() => {
+            // FAI PARTIRE IL TIMER DI CONFERMA
+            timerSilenzio = setTimeout(() => {
                 const frasePulita = fraseCorrente.toLowerCase().trim();
+                
+                // 1. Mostra conferma verde
                 display.innerHTML = `<span style="color: #2ecc71; font-weight: bold;">✅ ${frasePulita}</span>`;
                 
-                // Manda l'ordine al cervello
-                elaboraDettatoIntelligente(frasePulita);
-                
-                // 5. TRUCCO MAGICO: Spegniamo il microfono per svuotare la sua cache
-                // La funzione onend lo riaccenderà una frazione di secondo dopo, pulito e pronto!
-                if (isListening) {
-                    recognition.stop();
+                // 2. ELABORA IL PRODOTTO
+                if (typeof elaboraDettatoIntelligente === "function") {
+                    elaboraDettatoIntelligente(frasePulita);
                 }
-                
-                setTimeout(() => { 
-                    if(isListening) display.innerHTML = `<span class="ai-preview">Sto ascoltando...</span>`; 
-                }, 1500);
 
-            }, 1200); // 1.2 secondi di pausa per confermare
+                // 3. REBOOT DEL MICROFONO (Svuota la cache del tablet)
+                // Questo evita che alla prossima frase si tiri dietro quella vecchia
+                recognition.stop(); 
+                
+                setTimeout(() => {
+                   if(isListening) display.innerHTML = `<span class="ai-preview">Attendere...</span>`;
+                }, 1000);
+
+            }, 1200); // Aspetta 1.2 secondi di silenzio prima di inviare
         }
     };
 
     recognition.onerror = (event) => {
         console.log("Errore vocale:", event.error);
+        if(event.error === 'no-speech') restartRecognition();
     };
 
     recognition.onend = () => {
-        // Quando il sistema "stoppa" per pulire la cache, lo riavviamo all'istante
+        // Se l'ascolto è ancora attivo, riavvialo subito (pulito)
         if (isListening) {
-            try { recognition.start(); } catch(e) {}
+            restartRecognition();
         }
     };
 }
+
+function restartRecognition() {
+    try {
+        recognition.start();
+    } catch(e) {
+        console.log("Riavvio in corso...");
+    }
+}
+
 function toggleVocale() {
     if (!recognition) inizializzaVocale();
     
@@ -1044,6 +1051,7 @@ function toggleVocale() {
         recognition.start();
     } else {
         isListening = false;
+        clearTimeout(timerSilenzio);
         recognition.stop();
         const btn = document.getElementById('btn-microfono');
         if(btn) {
@@ -1051,8 +1059,7 @@ function toggleVocale() {
             btn.innerText = "🎤 Vocale";
         }
     }
-}
-function elaboraDettatoIntelligente(testo) {
+}function elaboraDettatoIntelligente(testo) {
     let testoProcessato = testo.toLowerCase().trim();
     
     // --- 1. CORREZIONE SINONIMI ---
