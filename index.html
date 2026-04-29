@@ -138,7 +138,39 @@ ascoltaTavoliDalCloud();
     opacity: 1 !important; /* Forza l'opacità al massimo */
     animation: blink 1s infinite; /* Opzionale: fa capire che sta elaborando */
 }
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column; /* Gli articoli vanno sopra, il carrello sotto */
+    }
 
+    .prodotti-container {
+        width: 100% !important;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+    }
+
+    .ordine-container {
+        width: 100% !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        height: 60px; /* Inizialmente contratto */
+        overflow: hidden;
+        background: #2c3e50;
+        transition: height 0.3s ease;
+        z-index: 1000;
+    }
+
+    /* Quando il carrello è attivo o espanso */
+    .ordine-container.espanso {
+        height: 70vh; /* Si apre per mostrare i dettagli */
+    }
+
+    /* Tasti enormi per le dita */
+    button {
+        min-height: 55px;
+        font-size: 1.1rem !important;
+    }
+}
 @keyframes blink {
     50% { opacity: 0.7; }
 }
@@ -1049,6 +1081,9 @@ function toggleVocale() {
     } else {
         isListening = false; // Fermiamo tutto definitivamente
         if (timerSilenzio) clearTimeout(timerSilenzio);
+if (isListening) {
+    document.querySelector('meta[name="viewport"]').content = "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+}
         recognition.stop();
         document.getElementById('btn-microfono').style.background = "#f39c12";
         document.getElementById('btn-microfono').innerText = "🎤 Vocale";
@@ -1064,7 +1099,9 @@ function restartRecognition() {
 
 function toggleVocale() {
     if (!recognition) inizializzaVocale();
-    
+    if (isListening) {
+    document.querySelector('meta[name="viewport"]').content = "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+}
     if (!isListening) {
         recognition.start();
     } else {
