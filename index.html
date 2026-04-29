@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
 
@@ -139,36 +140,68 @@ ascoltaTavoliDalCloud();
     animation: blink 1s infinite; /* Opzionale: fa capire che sta elaborando */
 }
 @media (max-width: 768px) {
+    /* Layout Base (Tablet e PC) */
+.container {
+    display: flex;
+    flex-direction: row; /* Fianco a fianco */
+    gap: 10px;
+    padding: 10px;
+    height: calc(100vh - 20px);
+}
+
+.prodotti-container {
+    flex: 2; /* Più spazio ai prodotti */
+    overflow-y: auto;
+}
+
+.ordine-container {
+    flex: 1; /* Meno spazio al carrello */
+    background: #ecf0f1;
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    min-width: 300px;
+}
+
+/* --- OTTIMIZZAZIONE SMARTPHONE (Schermi piccoli) --- */
+@media (max-width: 768px) {
     .container {
-        flex-direction: column; /* Gli articoli vanno sopra, il carrello sotto */
+        flex-direction: column; /* Colonna destra va SOTTO i prodotti */
+        height: auto;
     }
 
     .prodotti-container {
-        width: 100% !important;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+        width: 100%;
+        order: 1; /* Prodotti sopra */
     }
 
     .ordine-container {
-        width: 100% !important;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        height: 60px; /* Inizialmente contratto */
-        overflow: hidden;
-        background: #2c3e50;
-        transition: height 0.3s ease;
-        z-index: 1000;
+        width: 100%;
+        min-width: unset;
+        order: 2; /* Carrello sotto */
+        margin-top: 20px;
+        position: relative;
+        box-shadow: none;
+        border: 2px solid #2c3e50;
     }
 
-    /* Quando il carrello è attivo o espanso */
-    .ordine-container.espanso {
-        height: 70vh; /* Si apre per mostrare i dettagli */
+    /* Rendiamo i tasti dei prodotti più grandi per le dita */
+    .categoria-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
     }
 
-    /* Tasti enormi per le dita */
     button {
-        min-height: 55px;
-        font-size: 1.1rem !important;
+        padding: 15px 5px !important; /* Più alti, facili da premere */
+        font-size: 16px !important; /* Evita lo zoom automatico di iOS */
+    }
+
+    /* Il tastierino numerico (-1, Canc, ecc.) lo mettiamo su due righe per non farlo uscire */
+    .tastierino-servizio {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 5px;
     }
 }
 @keyframes blink {
@@ -488,6 +521,8 @@ function aggiungiSegue() {
 
     function aggiungiAOrdine(nome, prezzoBase, reparto = 'RIST') {
         let qta = 1, prezzoFinale = prezzoBase;
+// Opzionale: vibrazione leggera quando aggiungi un prodotto (solo su Android)
+if (navigator.vibrate) navigator.vibrate(40);
         if (buffer && buffer !== "") {
             if (buffer.includes('x')) {
                 let parti = buffer.split('x');
