@@ -251,8 +251,8 @@ ascoltaTavoliDalCloud();
 
     let totaleCorrente = 0;
     let buffer = "";
-    let articoliInCorso = [];
-    let ordiniArchiviati = JSON.parse(localStorage.getItem('pos_data')) || []; 
+    let articoliInCorso = []; // DEVE ESSERE un array vuoto, non null!
+    let ordiniArchiviati = JSON.parse(localStorage.getItem('pos_data')) || [];
     let modalitaTavoli = 'selezione';
     let idRigaSelezionata = null;
     let catAttuale = 'bar';
@@ -667,33 +667,32 @@ function mostraCategoria(cat) {
         for(let i=1; i<=7; i++) creaBtn('Cam.', i, cam, 'camera-style');
     }
 
-   function selezionaTavolo(nome) {
+function selezionaTavolo(nome) {
     if (articoliInCorso.length > 0) {
+        const nuovoId = Date.now();
         const nuovoOrdine = { 
-            id: Date.now(), 
+            id: nuovoId, 
             tavolo: nome, 
             ora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
             articoli: [...articoliInCorso], 
             totale: totaleCorrente 
         };
-        
-        ordiniArchiviati.push(nuovoOrdine);
-        stampaCucina(nome, articoliInCorso);
-        
-        // --- SINCRONIZZAZIONE TAVOLI CLOUD ---
-        db.collection("tavoli_aperti").doc(nuovoOrdine.id.toString()).set(nuovoOrdine)
-            .then(() => console.log("Tavolo sincronizzato online"))
-            .catch(err => console.error("Errore sincro tavolo:", err));
-        // -------------------------------------
 
-        salvaSuDisco(); 
-        svuotaOrdine(); 
-        chiudiTavoli();
+        // Salva l'ordine sul Cloud. 
+        // L'ascoltatore onSnapshot farà il resto in automatico (array e mappa)!
+        db.collection("tavoli_aperti").doc(nuovoId.toString()).set(nuovoOrdine)
+        .then(() => {
+            // Nessun push locale e nessun salvataggio su disco manuale!
+            stampaCucina(nome, articoliInCorso);
+            svuotaOrdine(); 
+            chiudiTavoli();
+        })
+        .catch(err => console.error("Errore salvataggio:", err));
+
     } else { 
         mostraDettaglio(nome); 
     }
 }
-
 
   function mostraDettaglio(nome) {
     document.getElementById('area-mappa').style.display = 'none';
@@ -786,24 +785,36 @@ function mostraCategoria(cat) {
         document.getElementById('lista-scontrini-tavolo').style.display = 'none';
     }
 
-    function richiama(id) {
-        const o = ordiniArchiviati.find(x => x.id === id);
-        if (o) {
-            articoliInCorso = [...o.articoli];
-            document.getElementById('tavolo-attuale').innerText = o.tavolo;
-            // Opzionale: rimuoviamo l'ordine vecchio così salvando il nuovo non facciamo doppioni
-            eliminaSingoloOrdine(id); 
-            chiudiTavoli();
-            renderingOrdine();
-        }
-    }
+function richiama(id) {
+    const indice = ordiniArchiviati.findIndex(o => o.id === id);
+    if (indice !== -1) {
+        const ordine = ordiniArchiviati[indice];
+        
+        // 1. Estrai i prodotti nel carrello a destra
+        articoliInCorso = [...ordine.articoli];
+        document.getElementById('tavolo-attuale').innerText = ordine.tavolo;
 
-    function svuotaOrdine() {
-        articoliInCorso = [];
-        document.getElementById('tavolo-attuale').innerText = "---";
-        localStorage.removeItem('ordine_corrente');
-        renderingOrdine();
+        // 2. CANCELLA DAL CLOUD 
+        // onSnapshot aggiornerà automaticamente gli array e la mappa su tutti i tablet
+        db.collection("tavoli_aperti").doc(id.toString()).delete()
+            .then(() => {
+                console.log("Ordine estratto e rimosso dal tavolo.");
+                renderingOrdine();
+                chiudiTavoli();
+            });
+        
+        // 3. Feedback visivo
+        document.getElementById('display-tasti').innerHTML = 
+            `<span style="color: #f39c12;">✏️ Modifica: assegna a un tavolo al termine</span>`;
     }
+}
+
+function svuotaOrdine() {
+    articoliInCorso = [];
+    localStorage.removeItem('ordine_corrente');
+    document.getElementById('tavolo-attuale').innerText = "---";
+    renderingOrdine();
+}
 
     window.onload = () => {
         caricaArticoliDalCloud();
@@ -812,9 +823,7 @@ function mostraCategoria(cat) {
     };
 
 
-    function chiudiDettaglioTavolo() { document.getElementById('area-mappa').style.display = 'block'; document.getElementById('lista-scontrini-tavolo').style.display = 'none'; }
-    function svuotaOrdine() { articoliInCorso = []; renderingOrdine(); document.getElementById('tavolo-attuale').innerText = "---"; localStorage.removeItem('ordine_corrente');
-}
+
 
     function emettiProforma() {
     if (articoliInCorso.length === 0) return alert("Nessun articolo nell'ordine!");
@@ -877,15 +886,7 @@ function aggiungiNuovoArticoloListino() {
     salvaSuDisco(); 
     mostraCategoria(cat); 
 }
-    function richiama(id) {
-        const idx = ordiniArchiviati.findIndex(o => o.id === id);
-        articoliInCorso = [...ordiniArchiviati[idx].articoli];
-        document.getElementById('tavolo-attuale').innerText = ordiniArchiviati[idx].tavolo;
-        ordiniArchiviati.splice(idx, 1);
-        salvaSuDisco(); renderingOrdine(); chiudiTavoli();
-    }
-
-    function modificaQuantita(n) {
+      function modificaQuantita(n) {
         if (!idRigaSelezionata) return;
         const idx = articoliInCorso.findIndex(a => a.id === idRigaSelezionata);
         articoliInCorso[idx].qta += n;
