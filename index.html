@@ -277,8 +277,33 @@ ascoltaTavoliDalCloud();
         console.error("Cloud Update Error: ", error);
     });
 }
+// Funzione per inviare i dati statistici al Cloud
+async function salvaDatiStatistici(proforma) {
+    const batch = db.batch(); // Usiamo un batch per efficienza
+    
+    proforma.articoli.forEach(art => {
+        // Creiamo un riferimento a un nuovo documento con ID automatico
+        const statsRef = db.collection("storico_vendite").doc();
+        
+        batch.set(statsRef, {
+            data: firebase.firestore.Timestamp.fromDate(new Date()), // Data esatta
+            nome: art.nome,
+            prezzo: art.prezzo,
+            qta: art.qta,
+            reparto: art.reparto || 'RIST', // Fondamentale per la divisione reparti
+            tavolo: proforma.tavolo,
+            totaleRiga: art.prezzo * art.qta
+        });
+    });
 
-  // --- FUNZIONE DI INVIO A RAW BT OTTIMIZZATA ---
+    try {
+        await batch.commit();
+        console.log("Statistiche aggiornate nel Cloud");
+    } catch (e) {
+        console.error("Errore salvataggio statistiche:", e);
+    }
+}
+   // --- FUNZIONE DI INVIO A RAW BT OTTIMIZZATA ---
 function inviaARawBT(testo) {
     // 1. Codifica il testo in Base64 (come facevi prima)
     const base64 = btoa(unescape(encodeURIComponent(testo)));
