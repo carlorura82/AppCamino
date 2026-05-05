@@ -285,26 +285,64 @@ ascoltaTavoliDalCloud();
     }
 
     // --- FUNZIONI DI STAMPA (AGGIORNATE PER TABLET) ---
-    function stampaFinestra(proforma) {
-        let testo = "\n" + MARGINE_STAMPA + "*** PROFORMA ***\n";
-        testo += MARGINE_STAMPA + "N. " + proforma.numero + " - " + proforma.tavolo + "\n";
-        testo += MARGINE_STAMPA + new Date().toLocaleDateString() + " " + proforma.ora + "\n";
-        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+function stampaFinestra(proforma) {
+    // 1. Intestazione dello scontrino
+    let testo = "\n" + MARGINE_STAMPA + "*** PROFORMA ***\n";
+    testo += MARGINE_STAMPA + "N. " + proforma.numero + " - " + proforma.tavolo + "\n";
+    testo += MARGINE_STAMPA + new Date().toLocaleDateString() + " " + proforma.ora + "\n";
+    testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+    
+    // 2. Variabili per i calcoli parziali
+    let totRist = 0; // Accumulatore per cibo e bevande
+    let totCame = 0; // Accumulatore per il pernottamento
+    let totTass = 0; // Accumulatore per la tassa di soggiorno
+
+    // 3. Ciclo principale sugli articoli dell'ordine
+    proforma.articoli.forEach(item => {
+        const q = `${item.qta}x `; // Formatta la quantità (es: "2x ")
+        const importoArticolo = item.qta * item.prezzo; // Calcola il subtotale della riga
+        const p = `EUR${importoArticolo.toFixed(2).padStart(7, " ")}`; // Formatta il prezzo allineato
         
-        proforma.articoli.forEach(item => {
-            const q = `${item.qta}x `; 
-            const p = `EUR${(item.qta * item.prezzo).toFixed(2).padStart(7, " ")}`;
-            const n = item.nome.substring(0, LARGHEZZA_RIGA - q.length - p.length - 1);
-            const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
-            testo += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
-        });
+        // Taglia il nome se troppo lungo per far stare tutto in una riga
+        const n = item.nome.substring(0, LARGHEZZA_RIGA - q.length - p.length - 1);
+        const sp = Math.max(1, LARGHEZZA_RIGA - (q.length + n.length + p.length));
         
-        testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
-        testo += MARGINE_STAMPA + "TOTALE: EUR " + proforma.totale.toFixed(2).padStart(8) + "\n\n";
-        testo += MARGINE_STAMPA + "Doc. non fiscale\n\n\n\n\n";
-        
-        inviaARawBT(testo);
+        // Aggiunge la riga dell'articolo al testo dello scontrino
+        testo += MARGINE_STAMPA + q + n + " ".repeat(sp) + p + "\n";
+
+        // 4. Logica di smistamento per i parziali (Ricerca testuale)
+        const nomeUpper = item.nome.toUpperCase();
+        if (nomeUpper.includes("CAMERA")) {
+            totCame += importoArticolo;
+        } else if (nomeUpper.includes("TASSA")) {
+            totTass += importoArticolo;
+        } else {
+            totRist += importoArticolo; // Se non è camera o tassa, è ristorante
+        }
+    });
+    
+    // 5. Sezione Rendiconto Parziale (prima del Totale)
+    testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+    
+    // Stampiamo i parziali solo se sono maggiori di zero per non appesantire lo scontrino
+    if (totRist > 0) {
+        testo += MARGINE_STAMPA + "TOT. RISTORANTE:  EUR " + totRist.toFixed(2).padStart(8) + "\n";
     }
+    if (totCame > 0) {
+        testo += MARGINE_STAMPA + "TOT. CAMERA:      EUR " + totCame.toFixed(2).padStart(8) + "\n";
+    }
+    if (totTass > 0) {
+        testo += MARGINE_STAMPA + "TOT. TASSA SOGG:  EUR " + totTass.toFixed(2).padStart(8) + "\n";
+    }
+    
+    // 6. Chiusura con Totale Generale
+    testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+    testo += MARGINE_STAMPA + "TOTALE GENERALE:  EUR " + proforma.totale.toFixed(2).padStart(8) + "\n\n";
+    testo += MARGINE_STAMPA + "Doc. non fiscale\n\n\n\n\n";
+    
+    // 7. Invio alla stampante tramite il protocollo RawBT
+    inviaARawBT(testo);
+}
 function menuModificaTesto() {
     const n = prompt("Nuovo Nome:", articoloInModifica.nome);
     const p = prompt("Nuovo Prezzo:", articoloInModifica.prezzo);
@@ -385,47 +423,68 @@ function menuEliminaArticolo() {
         inviaARawBT(testo);
     }
 
-    function chiusura() {
-        if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
-        if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
+function chiusura() {
+    // 1. Controllo se ci sono dati salvati nella sessione odierna
+    if (archivioProforma.length === 0) return alert("Nessun dato in archivio per la chiusura.");
+    
+    if (!confirm("Effettuare la CHIUSURA giornaliera? Tutti i dati verranno azzerati.")) return;
 
-        let c = { RIST: 0, CAME: 0, TASS: 0 };
-        let d = { RIST: "", CAME: "", TASS: "" };
+    // 2. Inizializziamo i contenitori per i soldi
+    let totRist = 0;
+    let totCame = 0;
+    let totTass = 0;
 
-        archivioProforma.forEach(p => {
-            if(!p.articoli) return;
-            p.articoli.forEach(art => {
-                let imp = (art.prezzo || 0) * (art.qta || 0);
-                let rep = art.reparto || "RIST";
-                if (!c.hasOwnProperty(rep)) rep = "RIST";
-                c[rep] += imp;
-                d[rep] += `${MARGINE_STAMPA}N.${p.numero} ${p.tavolo.toString().padEnd(8)} EUR ${imp.toFixed(2).padStart(8)}\n`;
+    // 3. Analizziamo ogni proforma salvato nell'archivio
+    archivioProforma.forEach(proforma => {
+        if(proforma.articoli) {
+            proforma.articoli.forEach(art => {
+                // Convertiamo il nome in maiuscolo per evitare errori di battitura (es. camera vs Camera)
+                const nomeArt = art.nome.toUpperCase();
+                const importo = (art.prezzo || 0) * (art.qta || 0);
+
+                // Smistamento logico basato sulle parole chiave nel nome dell'articolo
+                if (nomeArt.includes("CAMERA")) {
+                    totCame += importo;
+                } else if (nomeArt.includes("TASSA")) {
+                    totTass += importo;
+                } else {
+                    // Tutto ciò che non è Camera o Tassa finisce in Ristorante[cite: 1]
+                    totRist += importo;
+                }
             });
-        });
+        }
+    });
 
-        let testo = "\n" + MARGINE_STAMPA + "CHIUSURA DEL " + new Date().toLocaleDateString() + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** RISTORANTE/BAR **\n";
-        testo += (d.RIST || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE RIST: EUR " + c.RIST.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** CAMERE **\n";
-        testo += (d.CAME || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE CAME: EUR " + c.CAME.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "** TASSA SOGGIORNO **\n";
-        testo += (d.TASS || MARGINE_STAMPA + "(nessuna voce)\n");
-        testo += MARGINE_STAMPA + "TOTALE TASS: EUR " + c.TASS.toFixed(2).padStart(8) + "\n";
-        testo += MARGINE_STAMPA + "------------------------------\n";
-        testo += MARGINE_STAMPA + "TOTALE GENERALE: EUR " + (c.RIST+c.CAME+c.TASS).toFixed(2) + "\n\n\n\n\n";
+    // 4. Calcoliamo il Totale Generale[cite: 1]
+    const totaleGenerale = totRist + totCame + totTass;
 
-        inviaARawBT(testo);
-        
-        archivioProforma = []; 
-        contatoreProforma = 1; 
-        salvaSuDisco(); 
-        location.reload();
-    }
+    // 5. Costruiamo lo scontrino sintetico (molto più leggibile)[cite: 1]
+    let testo = "\n" + MARGINE_STAMPA + "   CHIUSURA GIORNALIERA\n";
+    testo += MARGINE_STAMPA + "    Data: " + new Date().toLocaleDateString() + "\n";
+    testo += MARGINE_STAMPA + "=".repeat(LARGHEZZA_RIGA) + "\n";
+    
+    // Stampiamo solo i 3 reparti richiesti[cite: 1]
+    testo += MARGINE_STAMPA + "TOTALE RISTORANTE: EUR " + totRist.toFixed(2).padStart(8) + "\n";
+    testo += MARGINE_STAMPA + "TOTALE CAMERE:     EUR " + totCame.toFixed(2).padStart(8) + "\n";
+    testo += MARGINE_STAMPA + "TOTALE TASSA SOGG: EUR " + totTass.toFixed(2).padStart(8) + "\n";
+    
+    testo += MARGINE_STAMPA + "-".repeat(LARGHEZZA_RIGA) + "\n";
+    
+    // Gran finale in grassetto o evidenziato (se la stampante lo supporta, altrimenti spaziato)[cite: 1]
+    testo += MARGINE_STAMPA + "TOTALE GENERALE:   EUR " + totaleGenerale.toFixed(2).padStart(8) + "\n";
+    testo += MARGINE_STAMPA + "=".repeat(LARGHEZZA_RIGA) + "\n\n\n\n\n";
+
+    // 6. Invio il comando alla stampante KUBE II via RawBT[cite: 1]
+    inviaARawBT(testo);
+    
+    // 7. Reset totale per il giorno successivo[cite: 1]
+    archivioProforma = []; 
+    contatoreProforma = 1; 
+    salvaSuDisco(); 
+    
+    alert("Chiusura completata e dati azzerati.");
+    location.reload(); 
+}
 
     // --- LOGICA INTERFACCIA (Invariata) ---
     function digita(v) { buffer += v; aggiornaDisplay(); }
@@ -695,47 +754,54 @@ function selezionaTavolo(nome) {
 }
 
   function mostraDettaglio(nome) {
+    // 1. Nascondiamo la mappa dei tavoli e mostriamo l'area dei dettagli
     document.getElementById('area-mappa').style.display = 'none';
     document.getElementById('lista-scontrini-tavolo').style.display = 'block';
     document.getElementById('nome-tavolo-dettaglio').innerText = nome;
     
     const corpo = document.getElementById('corpo-scontrini');
-    corpo.innerHTML = "";
+    corpo.innerHTML = ""; // Puliamo il contenuto precedente
     
+    // 2. Recuperiamo tutti i frammenti di ordine associati a questo tavolo
     const ordini = ordiniArchiviati.filter(o => o.tavolo === nome);
 
-    // --- 1. BOTTONE STAMPA PROFORMA TOTALE (Aggiunto di nuovo) ---
-    if (ordini.length > 1) {
+    // --- MODIFICA RICHIESTA: BOTTONE PROFORMA SEMPRE PRESENTE ---
+    // Aggiungiamo il bottone se esiste almeno un ordine[cite: 1]
+    if (ordini.length > 0) {
         const btnU = document.createElement('button');
-        btnU.innerHTML = "📄 STAMPA PROFORMA TOTALE";
+        btnU.innerHTML = "📄 EMETTI PROFORMA TOTALE";
+        // Stile professionale verde per la funzione principale di stampa[cite: 1]
         btnU.style = "width:100%; padding:15px; background:#27ae60; color:white; border:none; border-radius:5px; margin-bottom:15px; cursor:pointer; font-weight:bold; font-size:16px;";
         btnU.onclick = () => emettiProformaUnificato(nome);
         corpo.appendChild(btnU);
     }
 
-    // --- 2. ELENCO DEGLI ORDINI ESISTENTI ---
+    // --- MODIFICA RICHIESTA: ELENCO ORDINI SENZA BOTTONE STAMPA ---
     if (ordini.length > 0) {
         ordini.forEach(o => {
             const div = document.createElement('div');
+            // Stile della riga ordine con bordo azzurro a sinistra[cite: 1]
             div.style = "background:white; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; color:#333; border-left: 5px solid #3498db;";
+            
+            // Abbiamo rimosso il bottone 'Stampa' che non funzionava, lasciando solo 'Mod' (Modifica)[cite: 1]
             div.innerHTML = `
                 <span>Ore ${o.ora} - <b>${o.totale.toFixed(2)}€</b></span>
                 <div>
-                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:8px 12px; border-radius:3px; cursor:pointer;">Mod</button>
-                    <button onclick="stampaSingoloDaTavolo(${o.id})" style="background:#f39c12; color:white; border:none; padding:8px 12px; border-radius:3px; cursor:pointer; margin-left:5px;">Stampa</button>
+                    <button onclick="richiama(${o.id})" style="background:#3498db; color:white; border:none; padding:10px 15px; border-radius:3px; cursor:pointer; font-weight:bold;">MODIFICA</button>
                 </div>`;
             corpo.appendChild(div);
         });
     } else {
-        corpo.innerHTML = "<p style='color:#333; text-align:center;'>Nessun dato trovato.</p>";
+        corpo.innerHTML = "<p style='color:#333; text-align:center;'>Nessun ordine trovato per questo tavolo.</p>";
     }
 
-    // --- 3. TASTO RESET / SBLOCCA ---
-    const btnReset = document.createElement('button');
-    btnReset.style = "width:100%; padding:15px; margin-top:20px; background:#c0392b; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;";
-    btnReset.innerText = "⚠️ RESET / SBLOCCA TAVOLO";
-    btnReset.onclick = () => resetSbloccaTavolo(nome);
-    corpo.appendChild(btnReset);
+    // 3. Bottone per tornare alla mappa principale[cite: 1]
+    // Questo bottone è fondamentale per la navigazione (UX)[cite: 1]
+    const btnIndietro = document.createElement('button');
+    btnIndietro.style = "width:100%; padding:15px; margin-top:20px; background:#34495e; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;";
+    btnIndietro.innerText = "INDIETRO ALLA MAPPA";
+    btnIndietro.onclick = () => chiudiDettaglioTavolo();
+    corpo.appendChild(btnIndietro);
 }
 
     function resetSbloccaTavolo(nomeTavolo) {
