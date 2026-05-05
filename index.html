@@ -278,11 +278,25 @@ ascoltaTavoliDalCloud();
     });
 }
 
-    // --- FUNZIONE DI INVIO A RAW BT ---
-    function inviaARawBT(testo) {
-        const base64 = btoa(unescape(encodeURIComponent(testo)));
-        window.location.href = "rawbt:base64," + base64;
-    }
+  // --- FUNZIONE DI INVIO A RAW BT OTTIMIZZATA ---
+function inviaARawBT(testo) {
+    // 1. Codifica il testo in Base64 (come facevi prima)
+    const base64 = btoa(unescape(encodeURIComponent(testo)));
+    const url = "rawbt:base64," + base64;
+
+    // 2. Creiamo un iframe invisibile
+    let iframe = document.createElement('iframe');
+    iframe.style.display = 'none'; // Lo rendiamo invisibile
+    iframe.src = url;
+
+    // 3. Lo aggiungiamo al documento per "scattare" il comando
+    document.body.appendChild(iframe);
+
+    // 4. Lo rimuoviamo dopo 2 secondi per pulire la memoria
+    setTimeout(() => {
+        document.body.removeChild(iframe);
+    }, 2000);
+}
 
     // --- FUNZIONI DI STAMPA (AGGIORNATE PER TABLET) ---
 function stampaFinestra(proforma) {
